@@ -1,0 +1,200 @@
+/* Colors come from Tern's theme variables, so light/dark themes and "program colors" are followed.
+   --sf-accent is the program-palette accent when that mode is on; --accent otherwise.
+   Rules are scoped by [data-surface^='plugin.periscope.'] (set on each region element) so they hold in
+   `main` and in `layer` alike. */
+[data-surface^='plugin.periscope.'] {
+	--sub-accent: var(--sf-accent, var(--accent));
+}
+
+/* The row the keyboard cursor is on (host.luau sets mark = "pick"). Tern's own pick bar is too faint on agent rows. */
+[data-surface^='plugin.periscope.'] [data-role='periscope.row'][data-mark='pick'] {
+	background: rgb(from var(--sub-accent) r g b / 14%);
+	box-shadow: inset 3px 0 0 var(--sub-accent);
+}
+
+/* Filter / output-mode buttons: the active one is filled (--accent-fill is built to carry white text in every theme). */
+[data-surface^='plugin.periscope.'] [data-role='periscope.filter'] {
+	cursor: pointer;
+}
+
+[data-surface^='plugin.periscope.'] [data-role='periscope.filter'][data-mark='on'] {
+	background: var(--accent-fill);
+	color: #fff;
+	font-weight: 600;
+}
+
+/* Transcript header and split-view picker. They are drawn in the layer region (over the pane,
+   pointer-transparent) so they stay put while `main` scrolls; main starts with an invisible copy
+   that reserves the same height. The layer root takes the clicks and an opaque-ish backdrop. */
+.sf-layer[data-surface^='plugin.periscope.'] {
+	position: absolute;
+	inset: 0 0 auto 0;
+}
+
+.sf-layer[data-surface^='plugin.periscope.'][data-role='periscope.layer'] {
+	pointer-events: auto;
+	background: var(--card); /* opaque: --panel is translucent in glass windows and the transcript shows through */
+	box-shadow: 0 1px 0 var(--l2);
+	padding-top: 4px;
+	padding-bottom: 4px;
+}
+
+.sf-main[data-surface^='plugin.periscope.'] [data-role='periscope.spacer'] {
+	visibility: hidden;
+	padding-top: 4px;
+	padding-bottom: 4px;
+}
+
+/* Entries revealed by the keyboard land below the header, not under it (room for the bar and the description). */
+.sf-main[data-surface^='plugin.periscope.'] {
+	scroll-padding-top: 88px;
+}
+
+/* In the split view the layer is the picker plus the header, so revealed entries need more room. */
+.sf-main[data-surface^='plugin.periscope.'][data-role='periscope.split'] {
+	scroll-padding-top: 312px;
+}
+
+/* Split view picker: three rows, then it scrolls. Rows are a fixed 40px (below), so three rows have a
+   fixed height; the invisible copy in main is clipped to the same height. */
+[data-surface^='plugin.periscope.'] [data-role='periscope.rows'] {
+	display: flex;
+	flex-direction: column;
+	gap: var(--sub-row-gap, 6px);
+	max-height: var(--sub-rows-h, 132px); /* 3 rows of 40px + 2 gaps of 6px */
+}
+
+.sf-layer[data-surface^='plugin.periscope.'] [data-role='periscope.rows'] {
+	overflow-y: auto;
+}
+
+.sf-main[data-surface^='plugin.periscope.'] [data-role='periscope.rows'] {
+	overflow: hidden;
+}
+
+/* Agent list entries: one line of nine cells at fixed columns, with a little space between entries:
+     status · name · mode (the agent definition) · model · tools · requests · tokens · cost · time
+   host.luau always emits all nine cells (blank when empty), so plain grid auto-placement keeps every
+   column in place. The task description is not in the row; it is in the transcript header. */
+[data-surface^='plugin.periscope.'] [data-role='periscope.row'] {
+	display: grid;
+	grid-template-columns: 14px minmax(80px, 1.2fr) 64px minmax(84px, 1fr) 58px 50px 36px 44px 54px;
+	column-gap: 6px;
+	align-items: center;
+	box-sizing: border-box;
+	height: 40px;
+	margin: 0 0 var(--sub-row-gap, 6px);
+	padding: 0 8px;
+	border-radius: var(--r-chip);
+	box-shadow: 0 0 0 1px var(--l2);
+	overflow: hidden;
+	cursor: pointer;
+}
+
+[data-surface^='plugin.periscope.'] [data-role='periscope.rows'] [data-role='periscope.row'] {
+	margin-bottom: 0; /* the picker spaces its rows with flex gap */
+}
+
+[data-surface^='plugin.periscope.'] [data-role='periscope.rows'] > * {
+	flex: none; /* rows keep their 40px; the picker scrolls instead of squeezing them */
+}
+
+[data-surface^='plugin.periscope.'] [data-role='periscope.row'] > * {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* The mode badge (agent definition: task, scout, explore, …) fills its column: text centered in the
+   oval, long names ellipsized inside the pill instead of the pill being clipped. */
+[data-surface^='plugin.periscope.'] [data-role='periscope.row'] > .sf-badge {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	width: 100%;
+	padding: 0 8px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	text-align: center;
+}
+
+[data-surface^='plugin.periscope.'] [data-role='periscope.row'] [data-role='periscope.model'],
+[data-surface^='plugin.periscope.'] [data-role='periscope.row'] [data-role='periscope.num'] {
+	font-size: 12px;
+}
+
+[data-surface^='plugin.periscope.'] [data-role='periscope.row'] [data-role='periscope.num'] {
+	text-align: right;
+}
+
+/* Status glyph, colored by the row's status (the node's mark). */
+[data-surface^='plugin.periscope.'] [data-role='periscope.glyph'] {
+	color: var(--ink3);
+	text-align: center;
+}
+
+[data-surface^='plugin.periscope.'] [data-role='periscope.glyph'][data-mark='running'] {
+	color: var(--live);
+}
+
+[data-surface^='plugin.periscope.'] [data-role='periscope.glyph'][data-mark='done'] {
+	color: var(--ok);
+}
+
+[data-surface^='plugin.periscope.'] [data-role='periscope.glyph']:is([data-mark='failed'], [data-mark='aborted']) {
+	color: var(--bad);
+}
+
+/* Like the omp panel, neither the agent selector nor the transcript is wrapped in a card: both read
+   straight on the block background (the layer region keeps its own opaque backing, see above). */
+[data-surface^='plugin.periscope.'] [data-role='periscope.panel'] {
+	padding: 0 8px;
+}
+
+[data-surface^='plugin.periscope.'] [data-role='periscope.transcript'] {
+	padding: 0 8px;
+}
+
+/* Each turn (a user message or an assistant request) starts after open space, as in the omp panel, so a
+   long transcript does not read as one document. The first entry needs none. */
+[data-surface^='plugin.periscope.'] [data-role='periscope.turn'] {
+	margin-top: 22px;
+}
+
+[data-surface^='plugin.periscope.'] [data-role='periscope.transcript'] > [data-role='periscope.turn']:first-child {
+	margin-top: 0;
+}
+
+/* The break between the picker and the transcript: an accent bar.
+   (The bar holds a blank text node only so Tern mounts it; the text is hidden.) */
+[data-surface^='plugin.periscope.'] [data-role='periscope.divider'] {
+	height: 4px;
+	min-height: 4px;
+	margin: 6px 0;
+	overflow: hidden;
+	font-size: 0;
+	border-radius: 2px;
+	background: var(--sub-accent);
+}
+
+/* Header bar: one line; when the pane is narrow its items wrap as whole units (both copies alike). */
+[data-role='periscope.bar'] {
+	flex-wrap: wrap;
+	row-gap: 2px;
+}
+
+[data-role='periscope.bar'] > * {
+	white-space: nowrap;
+}
+
+/* The agent's short task description, under the bar: one ellipsized line, full text as tooltip. */
+[data-role='periscope.desc'] {
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	padding: 2px 0 0;
+}

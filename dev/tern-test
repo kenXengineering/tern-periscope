@@ -1,0 +1,23 @@
+#!/bin/sh
+# Starts an isolated Tern (own config dir, daemon and control socket) with this checkout linked as
+# the periscope plugin, so a smoke test never touches your real Tern config or plugins.
+#
+#   dev/tern-test [DIR]        open Tern in DIR (default: the current directory)
+#   dev/tern-test-ctl CMD …    drive that instance:  key ctrl+alt+s | click X Y [cmd] | shot NAME | quit
+#
+# Env: TERN_TEST_DIR  config dir of the isolated instance (default ~/.cache/tern-periscope-test)
+#
+# The first run also answers Tern's "manage omp?" offer with "no" (state.json below), so no popup
+# appears. Screenshots land in $TERN_TEST_DIR/run/target/shots/tern/live/.
+root="${TERN_TEST_DIR:-$HOME/.cache/tern-periscope-test}"
+repo="$(cd "$(dirname "$0")/.." && pwd)"
+mkdir -p "$root/omp" "$root/run"
+if [ ! -f "$root/omp/state.json" ]; then
+	printf '{\n  "managed": false,\n  "checked": 0,\n  "no_build": false,\n  "offered": true\n}\n' >"$root/omp/state.json"
+fi
+export TERN_CONFIG_DIR="$root" TERN_DAEMON_SOCKET="$root/daemon.sock"
+if [ ! -e "$(tern plugin dir)/periscope.path" ]; then
+	tern plugin link "$repo" || exit 1
+fi
+cd "$root/run" || exit 1
+exec tern --control "$root/ctl.sock" "${1:-$OLDPWD}"

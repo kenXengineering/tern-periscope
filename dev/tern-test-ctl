@@ -1,0 +1,7 @@
+#!/bin/sh
+# `tern ctl` against the instance started by dev/tern-test. Note `run` takes ONE argument
+# (quote a command line, or put it in a script): `dev/tern-test-ctl run "ls -la"`.
+root="${TERN_TEST_DIR:-$HOME/.cache/tern-periscope-test}"
+export TERN_CONFIG_DIR="$root" TERN_DAEMON_SOCKET="$root/daemon.sock"
+cd "$root/run" || exit 1
+exec tern ctl --control "$root/ctl.sock" "$@"
