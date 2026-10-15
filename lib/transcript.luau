@@ -42,7 +42,8 @@ export type Viewer = {
 	more: boolean, -- the file has lines before the tail
 	entries: { Entry },
 	cursor: number,
-	follow: boolean,
+	follow: boolean, -- keep the newest entry in view as the file grows; on with G / End or by moving down to the end
+	land: boolean, -- scroll to the newest entry once, when the transcript first shows
 	expanded: { [string]: boolean },
 	outputs: string, -- one of OUTPUT_MODES
 	loaded: boolean,
@@ -60,7 +61,8 @@ function M.new(path: string, label: string): Viewer
 		more = false,
 		entries = {},
 		cursor = 0,
-		follow = true,
+		follow = false,
+		land = true,
 		expanded = {},
 		outputs = "preview",
 		loaded = false,
@@ -235,7 +237,7 @@ function M.poll(v: Viewer, force: boolean, cb: (changed: boolean) -> ())
 				entries = trimmed
 			end
 			v.entries = entries
-			if v.follow or v.cursor > #entries then
+			if v.follow or v.land or v.cursor > #entries then
 				v.cursor = #entries
 			end
 			cb(true)
@@ -526,7 +528,8 @@ end
 
 function M.follow_soon(v: Viewer, cx: BlockCx)
 	tern.timer(60, function()
-		if v.follow then
+		if v.follow or v.land then
+			v.land = false
 			M.reveal(v, cx, "end")
 		end
 	end)
@@ -546,6 +549,7 @@ end
 function M.key(v: Viewer, key: Key, cx: BlockCx): boolean
 	local n = #v.entries
 	local name = key.name
+	local before = v.cursor
 	if key.ctrl or key.alt or key.meta then
 		return false
 	end
@@ -557,7 +561,7 @@ function M.key(v: Viewer, key: Key, cx: BlockCx): boolean
 		v.cursor = math.min(v.cursor + 8, n)
 	elseif name == "page_up" then
 		v.cursor = math.max(v.cursor - 8, 1)
-	elseif name == "g" or name == "home" then
+	elseif (name == "g" and not key.shift and key.text ~= "G") or name == "home" then
 		v.cursor = 1
 	elseif key.text == "G" or name == "end" then
 		v.cursor = n
@@ -589,7 +593,13 @@ function M.key(v: Viewer, key: Key, cx: BlockCx): boolean
 	else
 		return false
 	end
-	v.follow = v.cursor >= n
+	if key.text == "G" or name == "end" then
+		v.follow = true
+	elseif v.cursor < n then
+		v.follow = false
+	elseif before < n then
+		v.follow = true -- moved down onto the newest entry
+	end
 	M.reveal(v, cx, if v.follow then "end" else "nearest")
 	return true
 end
@@ -599,7 +609,7 @@ function M.pick(v: Viewer, key: string)
 	for i, entry in v.entries do
 		if entry.key == key then
 			v.cursor = i
-			v.follow = i >= #v.entries
+			v.follow = v.follow and i >= #v.entries
 			if entry.kind == "tool" and entry.result ~= nil and entry.result ~= "" then
 				v.expanded[entry.key] = not tool_open(v, entry)
 			end

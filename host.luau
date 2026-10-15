@@ -393,7 +393,7 @@ function open_here(state: ListState, file: string, cx: BlockCx)
 	state.viewing, state.viewer, state.sel = file, v, file
 	transcript.poll(v, true, function()
 		cx:render()
-		if v.follow then
+		if v.follow or v.land then
 			transcript.follow_soon(v, cx)
 		else
 			transcript.restore_soon(v, cx)
