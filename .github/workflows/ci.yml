@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # luau-lsp is not on the runners; pin the release and its checksum.
+  LUAU_LSP_VERSION: 1.70.1
+  LUAU_LSP_SHA256: 1a2ea1ae4f98f8946cefd970a4b54853e11ab4775e6932faa7f60cf920346567
+
+jobs:
+  luau:
+    name: Luau analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install luau-lsp
+        run: |
+          curl -fsSL -o luau-lsp.zip "https://github.com/JohnnyMorganz/luau-lsp/releases/download/${LUAU_LSP_VERSION}/luau-lsp-linux-x86_64.zip"
+          echo "${LUAU_LSP_SHA256}  luau-lsp.zip" | sha256sum -c -
+          unzip -q luau-lsp.zip luau-lsp
+          chmod +x luau-lsp
+      # .github/tern.d.luau is a pinned copy of `tern plugin types DIR`; refresh it by hand when Tern updates.
+      - name: Analyze
+        run: ./luau-lsp analyze --platform=standard --definitions=@tern=.github/tern.d.luau host.luau window.luau lib/*.luau
+
+  manifest:
+    name: Manifest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: python3 .github/scripts/check-manifest.py
+
+  shell:
+    name: Shell (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Syntax under sh and bash (and dash where present)
+        run: |
+          for f in scripts/scan.sh dev/tern-test dev/tern-test-ctl; do
+            sh -n "$f"
+            bash -n "$f"
+            if command -v dash >/dev/null; then dash -n "$f"; fi
+          done
+      - name: ShellCheck
+        if: runner.os == 'Linux'
+        run: shellcheck -s sh -S warning scripts/scan.sh dev/tern-test dev/tern-test-ctl
+
+  awk:
+    name: awk (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install gawk
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then sudo apt-get update -qq && sudo apt-get install -y -qq gawk mawk; else brew install gawk; fi
+      - name: agent.awk gives the same digest under every awk
+        run: |
+          status=0
+          for impl in awk gawk mawk; do
+            command -v "$impl" >/dev/null || continue
+            echo "== $impl"
+            if ! "$impl" -f scripts/agent.awk .github/fixtures/agent.jsonl | diff -u .github/fixtures/agent.expected -; then status=1; fi
+          done
+          exit $status
+
+  tests:
+    name: Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: tests/run.sh
+        run: |
+          if [ -f tests/run.sh ]; then sh tests/run.sh; else echo "no tests/run.sh yet (issue #1)"; fi

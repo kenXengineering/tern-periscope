@@ -6,3 +6,6 @@ target/
 
 .worktrees/
 .DS_Store
+
+# The pinned copy CI analyses against (see .github/workflows/ci.yml)
+!.github/tern.d.luau
