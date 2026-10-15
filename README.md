@@ -57,6 +57,10 @@ running time, then three output buttons, with the task description on a line bel
 **Expanded** (full). They apply to bash/shell and every other tool result; folding a single tool with `Space` or a
 click still overrides the mode for that tool.
 
+Tool output is drawn with the richest Tern node that fits, in the Tern theme's colors: a unified diff as a diff, JSON
+as a collapsible tree, a `read` of a known file type (`.go`, `.ts`, `.md`, …) as highlighted code with line numbers,
+anything else (including bash) as ANSI text, so colors the command emitted show. Thoughts are Markdown, in italics.
+
 Each agent's view is remembered while the block lives: switching to another agent and back keeps its output mode,
 its folds and its cursor entry, and scrolls back to that entry. Only the cursor entry is restored, not the exact
 scroll offset: Luau cannot read how far the pane is scrolled, so scrolling with the wheel alone is not remembered
