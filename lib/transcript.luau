@@ -329,6 +329,69 @@ local function tool_open(v: Viewer, entry: Entry): boolean
 end
 
 
+local LANG_OF: { [string]: string } = {
+	go = "go", lua = "lua", luau = "lua", py = "python", js = "javascript", mjs = "javascript", jsx = "javascript",
+	ts = "typescript", tsx = "typescript", json = "json", yaml = "yaml", yml = "yaml", toml = "toml", md = "markdown",
+	sh = "bash", bash = "bash", zsh = "bash", rs = "rust", c = "c", h = "c", cpp = "cpp", java = "java", rb = "ruby",
+	css = "css", html = "html", sql = "sql", swift = "swift", kt = "kotlin", tf = "hcl", awk = "awk", mod = "go",
+}
+
+-- omp's read output: an optional `[path#TAG]` line, then `N:text` per line. Returns the code without the
+-- line prefixes and the first line number; nil when the lines are not one contiguous run.
+local function unprefix(text: string): (string?, number?)
+	local lines = string.split(text, "\n")
+	local first = if string.match(lines[1] or "", "^%[.-#%x+%]$") then 2 else 1
+	local out: { string } = {}
+	local start: number? = nil
+	local expect: number? = nil
+	for i = first, #lines do
+		local n, rest = string.match(lines[i], "^(%d+)[:|](.*)$")
+		if n == nil or rest == nil then
+			return nil, nil
+		end
+		local num = tonumber(n) :: number
+		if expect ~= nil and num ~= expect then
+			return nil, nil
+		end
+		start = start or num
+		expect = num + 1
+		table.insert(out, rest)
+	end
+	if start == nil then
+		return nil, nil
+	end
+	return table.concat(out, "\n"), start
+end
+
+-- A tool result as the richest node that fits it: a diff, a JSON tree, highlighted code for a file
+-- read, else ANSI text. Colors come from Tern's theme in every case.
+local function result_node(entry: Entry, text: string): Node
+	local args = entry.args or {}
+	local path = if type(args.path) == "string" then args.path else nil
+	local trimmed = string.match(text, "^%s*(.-)%s*$") or text
+	if string.match(trimmed, "^diff %-%-git ") or string.match(trimmed, "^%-%-%- .-\n%+%+%+ ") or string.match(trimmed, "^@@ .- @@") then
+		return ui.diff(text, path)
+	end
+	local first = string.sub(trimmed, 1, 1)
+	if first == "{" or first == "[" then
+		local tree = tern.parse.json_tree(trimmed)
+		if tree ~= nil then
+			return tree
+		end
+	end
+	if entry.name == "read" and path ~= nil then
+		local ext = string.lower(string.match(path, "%.([%w]+)$") or "")
+		local lang = LANG_OF[ext]
+		if lang ~= nil then
+			local code, start = unprefix(text)
+			if code ~= nil then
+				return ui.code(code, lang, start)
+			end
+		end
+	end
+	return ui.node("ansi", { text = text })
+end
+
 local function entry_body(v: Viewer, entry: Entry, index: number): Node
 	local marked = if index == v.cursor then "pick" else nil
 	local open = v.expanded[entry.key] == true
@@ -362,17 +425,17 @@ local function entry_body(v: Viewer, entry: Entry, index: number): Node
 			local text = clip(result)
 			local lines = string.split(text, "\n")
 			if show then
-				table.insert(body, ui.node("ansi", { text = text }))
+				table.insert(body, result_node(entry, text))
 				if #lines > PREVIEW_LINES then
 					note = "click to collapse"
 				end
 			elseif v.outputs == "hidden" then
 				note = #lines .. (if #lines == 1 then " line" else " lines") .. " · click to expand"
 			elseif #lines > PREVIEW_LINES then
-				table.insert(body, ui.node("ansi", { text = table.concat(lines, "\n", 1, PREVIEW_LINES) }))
+				table.insert(body, result_node(entry, table.concat(lines, "\n", 1, PREVIEW_LINES)))
 				note = (#lines - PREVIEW_LINES) .. " more lines · click to expand"
 			else
-				table.insert(body, ui.node("ansi", { text = text }))
+				table.insert(body, result_node(entry, text))
 			end
 		end
 		local name = entry.name or "tool"
