@@ -14,11 +14,6 @@ title = "Periscope"
 icon = "eye"
 
 [[blocks]]
-id = "split"
-title = "Periscope split"
-icon = "eye"
-
-[[blocks]]
 id = "transcript"
 title = "Periscope transcript"
 palette = false

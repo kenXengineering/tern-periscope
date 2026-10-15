@@ -475,7 +475,7 @@ function M.hints(v: Viewer, back: string?): Node
 		table.insert(spans, ui.span(back, "accent"))
 		table.insert(spans, ui.span("  "))
 	end
-	table.insert(spans, ui.span("j/k move · space fold · c/e collapse/expand output · G follow" .. (if v.follow then " (on)" else "") .. " · g top · p more · r reload", "muted"))
+	table.insert(spans, ui.span("↑↓ scroll · space fold · c/e collapse/expand output · G follow" .. (if v.follow then " (on)" else "") .. " · g top · p more · r reload", "muted"))
 	return ui.row({ ui.text(spans) })
 end
 
