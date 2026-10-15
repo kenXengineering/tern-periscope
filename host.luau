@@ -22,7 +22,6 @@ type Viewer = transcript.Viewer
 local TICK_MS = 1500 -- loop period; the agent scan runs every REFRESH_EVERY ticks
 local REFRESH_EVERY = 2
 local SESSIONS_EVERY = 6 -- re-list the directory's sessions this often (in ticks)
-local DOUBLE_LEFT_MS = 700
 
 -- Whether pane `pane` still runs (a block that ended is gone from the list).
 local function running(pane: number): boolean
@@ -85,7 +84,8 @@ type ListState = {
 	viewer: Viewer?,
 	viewers: { [string]: Viewer }, -- by transcript path: reopening an agent keeps its output mode, folds and cursor
 	restore: string?, -- transcript to reopen once the session is known
-	left_at: number,
+	skip_empty: boolean, -- hide sessions that have no subagents
+	picking: boolean, -- the session picker popup is open
 }
 
 local function wall(state: ListState): number
@@ -200,6 +200,20 @@ local function chunks(names: { string }, n: number): { { string } }
 			table.insert(chunk, names[j])
 		end
 		table.insert(out, chunk)
+	end
+	return out
+end
+
+-- The sessions the picker, `s` and `S` can reach: all of them, or only those with subagents.
+local function listed(state: ListState): { Session }
+	if not state.skip_empty then
+		return state.sessions
+	end
+	local out: { Session } = {}
+	for _, s in state.sessions do
+		if s.subagents > 0 then
+			table.insert(out, s)
+		end
 	end
 	return out
 end
@@ -322,9 +336,10 @@ local function scan(state: ListState, cx: BlockCx, done: () -> ())
 			state.now, state.mono = now, tern.now()
 		end
 		state.sessions = sessions
-		local pick: Session? = sessions[1]
+		local choices = listed(state)
+		local pick: Session? = choices[1]
 		if state.pinned ~= nil then
-			for _, s in sessions do
+			for _, s in choices do
 				if s.id == state.pinned then
 					pick = s
 				end
@@ -351,7 +366,7 @@ local function title_of(state: ListState): string
 	if state.viewing ~= nil then
 		return util.strip_suffix(state.viewing, ".jsonl")
 	end
-	return if n > 0 then "Subagents (" .. n .. " running)" else "Subagents"
+	return if n > 0 then "Periscope (" .. n .. " running)" else "Periscope"
 end
 
 function open_here(state: ListState, file: string, cx: BlockCx)
@@ -426,6 +441,74 @@ local function sync_split(state: ListState, cx: BlockCx)
 	else
 		state.viewing, state.viewer = nil, nil
 	end
+end
+
+-- Shows session `nxt`: pins it, drops the old session's agents and rescans.
+local function switch_session(state: ListState, nxt: Session, cx: BlockCx)
+	local current = state.session
+	if current ~= nil and current.id == nxt.id then
+		return
+	end
+	state.pinned = nxt.id
+	state.session, state.agents, state.sizes, state.sel = nxt, {}, {}, nil
+	state.viewing, state.viewer = nil, nil
+	state.ticks = 1 -- next tick is not a session re-list
+	scan(state, cx, function()
+		ensure_sel(state)
+		sync_split(state, cx)
+		cx:render()
+	end)
+	cx:render()
+end
+
+-- Moves to the previous (-1) or next (1) listed agent, in the split view's transcript or the drill-down.
+local function step_agent(state: ListState, dir: number, cx: BlockCx)
+	local order = visible(state)
+	local at = 0
+	for i, ag in order do
+		if ag.file == (state.viewing or state.sel) then
+			at = i
+		end
+	end
+	local nxt = order[math.max(1, math.min(at + dir, #order))]
+	if nxt == nil or nxt.file == state.viewing then
+		return
+	end
+	state.sel = nxt.file
+	if state.layout == "split" then
+		open_split(state, nxt.file, cx)
+	else
+		open_here(state, nxt.file, cx)
+	end
+	reveal(state, cx, true)
+end
+
+-- `dir` 1: the next session in the list (older), -1: the previous one (newer); wraps around.
+local function step_session(state: ListState, dir: number, cx: BlockCx)
+	local choices = listed(state)
+	local n = #choices
+	if n < 2 then
+		return
+	end
+	local at = 0
+	local current = state.session
+	for i, s in choices do
+		if current ~= nil and s.id == current.id then
+			at = i
+		end
+	end
+	local to = if at == 0 then (if dir > 0 then 1 else n) else (at - 1 + dir) % n + 1
+	switch_session(state, choices[to], cx)
+end
+
+-- Re-lists the sessions now (after the "hide sessions without subagents" option changed).
+local function relist(state: ListState, cx: BlockCx)
+	state.ticks = 0
+	scan(state, cx, function()
+		ensure_sel(state)
+		sync_split(state, cx)
+		cx:render()
+	end)
 end
 
 local function set_filter(state: ListState, id: string, cx: BlockCx)
@@ -555,10 +638,72 @@ local function layout_badge(label: string, mode: string): Node
 	return with(ui.badge(label, "neutral"), { key = "layout", role = "periscope.filter", actions = { click = "layout=" .. mode } })
 end
 
+-- The "Sessions N" button that opens the session picker.
+local function sessions_badge(state: ListState): Node
+	return with(ui.badge("Sessions " .. #listed(state), if state.picking then "accent" else "neutral"), {
+		key = "sessions",
+		role = "periscope.filter",
+		actions = { click = "sessions=open" },
+		mark = if state.picking then "on" else nil,
+	})
+end
+
+-- The session picker: a scrollable list drawn in the layer region, over the top of the block.
+local function session_popup(state: ListState): Node
+	local current = state.session
+	local rows: { Node } = {}
+	for _, s in listed(state) do
+		local on = current ~= nil and current.id == s.id
+		local title = if s.title ~= "" then s.title else s.id
+		table.insert(
+			rows,
+			with(
+				ui.row({
+					with(ui.text({ ui.span(if on then "●" else "○") }), { role = "periscope.glyph", mark = if on then "running" else nil }),
+					with(ui.text({ ui.span(title, "strong") }), { role = "periscope.name" }),
+					ui.text({ ui.span(s.subagents .. (if s.subagents == 1 then " agent" else " agents"), "muted") }),
+				}),
+				{
+					key = "s_" .. safe(s.id),
+					role = "periscope.session",
+					mark = if on then "pick" else nil,
+					actions = { click = "session=" .. s.id },
+				}
+			)
+		)
+	end
+	if #rows == 0 then
+		table.insert(rows, ui.text({ ui.span(if state.skip_empty then "No session has subagents." else "No omp sessions found.", "muted") }))
+	end
+	local head = ui.row({
+		ui.text({ ui.span("Sessions", "strong") }),
+		with(ui.text({ ui.span("") }), { grow = 1, key = "gap" }),
+		with(ui.badge("Hide sessions without subagents", if state.skip_empty then "accent" else "neutral"), {
+			key = "skip_empty",
+			role = "periscope.filter",
+			actions = { click = "sessions=skip_empty" },
+			mark = if state.skip_empty then "on" else nil,
+		}),
+		with(ui.badge("Close", "neutral"), { key = "close", role = "periscope.filter", actions = { click = "sessions=close" } }),
+	})
+	return with(ui.col({ head, with(ui.col(rows), { key = "sessions", role = "periscope.sessions" }) }), { key = "popup", role = "periscope.popup" })
+end
+
+-- Draws the session picker above `view` when it is open.
+local function with_popup(state: ListState, view: BlockView): BlockView
+	if not state.picking then
+		return view
+	end
+	local popup = session_popup(state)
+	local below = view.layer
+	view.layer = with(ui.col(if below ~= nil then { below, popup } else { popup }), { role = "periscope.layer" })
+	return view
+end
+
 local function list_view(state: ListState): BlockView
 	local n = counts(state)
 	local session = state.session
-	local head: { Span } = { ui.span("Subagents", "strong") }
+	local head: { Span } = { ui.span("Periscope", "strong") }
 	if session ~= nil and session.title ~= "" then
 		table.insert(head, ui.span("  " .. session.title, "muted"))
 	end
@@ -566,6 +711,7 @@ local function list_view(state: ListState): BlockView
 	for _, b in filter_badges(state, n) do
 		table.insert(bar, b)
 	end
+	table.insert(bar, sessions_badge(state))
 	table.insert(bar, layout_badge("Split view", "split"))
 	local header = ui.row(bar)
 	local body: { Node } = {}
@@ -587,9 +733,9 @@ local function list_view(state: ListState): BlockView
 		table.insert(body, ui.text({ ui.span("No " .. string.lower(state.filter) .. " subagents.", "muted") }))
 	end
 	table.insert(body, with(ui.col(rows), { key = "agents", role = "periscope.panel" }))
-	local hint = "↑↓ select · click / enter open here · ⌘click / ⌘enter / o open below · v split view · f filter"
-	if #state.sessions > 1 then
-		hint ..= " · s next session"
+	local hint = "↑↓ select · click / enter open here · ⌘click / ⌘enter / o open below · l split view · f filter"
+	if #listed(state) > 1 then
+		hint ..= " · s/S next/previous session"
 	end
 	return {
 		main = ui.col({ header, with(ui.col(body), { key = "body" }) }),
@@ -625,7 +771,7 @@ local function transcript_view(state: ListState, v: Viewer): BlockView
 	local a = state.viewing and state.agents[state.viewing]
 	local function bar(): { Node }
 		local nodes: { Node } = {
-			with(ui.badge("← Subagents", "accent"), { actions = { click = "back" }, key = "back" }),
+			with(ui.badge("← Periscope", "accent"), { actions = { click = "back" }, key = "back" }),
 			ui.text({ ui.span(v.label, "strong") }),
 		}
 		if a then
@@ -643,7 +789,7 @@ local function transcript_view(state: ListState, v: Viewer): BlockView
 		end
 		return nodes
 	end
-	return framed(v, bar, if a then a.task else nil, transcript.hints(v, "esc / ←← back"))
+	return framed(v, bar, if a then a.task else nil, transcript.hints(v, "esc back · ←/→ agent"))
 end
 
 -- Facts about an agent for a header: status badge, then "N req · $cost · running time".
@@ -668,10 +814,11 @@ local function split_view(state: ListState): BlockView
 	local v = state.viewer
 	local a = if state.viewing ~= nil then state.agents[state.viewing] else nil
 	local function picker(limit: number?): Node
-		local head: { Node } = { ui.text({ ui.span("Subagents", "strong") }) }
+		local head: { Node } = { ui.text({ ui.span("Periscope", "strong") }) }
 		for _, b in filter_badges(state, n) do
 			table.insert(head, b)
 		end
+		table.insert(head, sessions_badge(state))
 		table.insert(head, layout_badge("List view", "list"))
 		local rows: { Node } = {}
 		for _, ag in visible(state) do
@@ -711,7 +858,7 @@ local function split_view(state: ListState): BlockView
 		ui.col({ picker(nil), divider(), header_block(bar, desc, "periscope.header") }),
 		{ role = "periscope.layer" }
 	)
-	local hint = "↑↓ pick agent · c/e output · space fold · g/G top/end · f filter · o open below · v list view"
+	local hint = "←→ pick agent · ↑↓ scroll · c/e output · space fold · g/G top/end · f filter · o open below · s/S session · l list view"
 	return { main = main, layer = layer, dock = ui.row({ ui.text({ ui.span(hint, "muted") }) }) }
 end
 
@@ -720,21 +867,8 @@ local function split_key(state: ListState, key: Key, cx: BlockCx): boolean
 	local plain = not (key.ctrl or key.alt or key.meta)
 	if plain and (name == "escape" or name == "v") then
 		set_layout(state, "list", cx)
-	elseif plain and (name == "j" or name == "down" or name == "k" or name == "up") then
-		local order = visible(state)
-		local at = 0
-		for i, ag in order do
-			if ag.file == state.sel then
-				at = i
-			end
-		end
-		local step = if name == "j" or name == "down" then 1 else -1
-		local nxt = order[math.max(1, math.min(at + step, #order))]
-		if nxt ~= nil then
-			state.sel = nxt.file
-			open_split(state, nxt.file, cx)
-			reveal(state, cx, true)
-		end
+	elseif plain and not key.shift and (name == "left" or name == "right") then
+		step_agent(state, if name == "right" then 1 else -1, cx)
 	elseif plain and name == "f" then
 		set_filter(state, next_filter(state), cx)
 	elseif (plain and name == "o") or (name == "enter" and key.meta) then
@@ -769,12 +903,13 @@ local list: BlockDef<ListState> = {
 			error = nil,
 			sel = nil,
 			filter = if saved ~= nil and valid_filter(saved.filter) then saved.filter else "all",
-			layout = if saved ~= nil and saved.layout == "split" then "split" else "list",
+			layout = if saved ~= nil and saved.layout == "list" then "list" else "split",
 			viewing = nil,
 			viewer = nil,
 			viewers = {},
 			restore = if saved ~= nil then saved.viewing else nil,
-			left_at = -math.huge,
+			skip_empty = saved ~= nil and saved.skip_empty == true,
+			picking = false,
 		}
 		local function tick()
 			if state.stopped or not running(cx.pane) then
@@ -825,15 +960,27 @@ local list: BlockDef<ListState> = {
 
 	view = function(state, _cx)
 		if state.layout == "split" then
-			return split_view(state)
+			return with_popup(state, split_view(state))
 		end
 		if state.viewer ~= nil then
-			return transcript_view(state, state.viewer)
+			return with_popup(state, transcript_view(state, state.viewer))
 		end
-		return list_view(state)
+		return with_popup(state, list_view(state))
 	end,
 
 	key = function(state, key, cx)
+		if state.picking and key.name == "escape" then
+			state.picking = false
+			return true
+		end
+		if not (key.ctrl or key.alt or key.meta) and string.lower(key.name) == "s" then
+			step_session(state, if key.shift or key.name == "S" or key.text == "S" then -1 else 1, cx)
+			return true
+		end
+		if not (key.ctrl or key.alt or key.meta) and key.name == "l" then
+			set_layout(state, if state.layout == "split" then "list" else "split", cx)
+			return true
+		end
 		if state.layout == "split" then
 			return split_key(state, key, cx)
 		end
@@ -842,15 +989,9 @@ local list: BlockDef<ListState> = {
 			if key.name == "escape" then
 				close_view(state, cx)
 				return true
-			elseif key.name == "left" and not (key.ctrl or key.alt or key.meta or key.shift) then
-				local now = tern.now()
-				if now - state.left_at <= DOUBLE_LEFT_MS then
-					state.left_at = -math.huge
-					close_view(state, cx)
-					return true
-				end
-				state.left_at = now
-				return false
+			elseif (key.name == "left" or key.name == "right") and not (key.ctrl or key.alt or key.meta or key.shift) then
+				step_agent(state, if key.name == "right" then 1 else -1, cx)
+				return true
 			end
 			return transcript.key(v, key, cx)
 		end
@@ -882,21 +1023,6 @@ local list: BlockDef<ListState> = {
 			else
 				open_here(state, state.sel, cx)
 			end
-		elseif key.name == "s" and #state.sessions > 1 then
-			local current = state.session
-			local nxt = state.sessions[1]
-			for i, s in state.sessions do
-				if current ~= nil and s.id == current.id then
-					nxt = state.sessions[i % #state.sessions + 1]
-				end
-			end
-			state.pinned = nxt.id
-			state.session, state.agents, state.sizes, state.sel = nxt, {}, {}, nil
-			state.ticks = 1 -- next tick is not a session re-list
-			scan(state, cx, function()
-				ensure_sel(state)
-				cx:render()
-			end)
 		elseif key.name == "r" then
 			state.sizes = {}
 			scan(state, cx, function()
@@ -929,6 +1055,22 @@ local list: BlockDef<ListState> = {
 			set_filter(state, ev.value, cx)
 		elseif ev.act == "layout" and type(ev.value) == "string" then
 			set_layout(state, ev.value, cx)
+		elseif ev.act == "sessions" and type(ev.value) == "string" then
+			if ev.value == "open" then
+				state.picking = not state.picking
+			elseif ev.value == "close" then
+				state.picking = false
+			elseif ev.value == "skip_empty" then
+				state.skip_empty = not state.skip_empty
+				relist(state, cx)
+			end
+		elseif ev.act == "session" and type(ev.value) == "string" then
+			state.picking = false
+			for _, s in state.sessions do
+				if s.id == ev.value then
+					switch_session(state, s, cx)
+				end
+			end
 		elseif ev.act == "back" then
 			close_view(state, cx)
 		elseif ev.act == "pick" and state.viewer ~= nil and type(ev.value) == "string" then
@@ -939,22 +1081,11 @@ local list: BlockDef<ListState> = {
 	end,
 
 	save = function(state)
-		return { pinned = state.pinned, viewing = state.viewing, filter = state.filter, layout = state.layout }
+		return { pinned = state.pinned, viewing = state.viewing, filter = state.filter, layout = state.layout, skip_empty = state.skip_empty }
 	end,
 }
 
 tern.block.define("list", list)
-
--- periscope.split: the same block, opened in the split layout.
-local split: BlockDef<ListState> = table.clone(list)
-split.init = function(cx, args, saved)
-	local state = list.init(cx, args, saved)
-	if saved == nil or saved.layout == nil then
-		state.layout = "split"
-	end
-	return state
-end
-tern.block.define("split", split)
 
 ------------------------------------------------------------------------------------------
 -- periscope.transcript

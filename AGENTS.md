@@ -12,8 +12,9 @@ installs it directly. Everything ships as **source**: no build step, no `package
 Two Luau VMs, declared in `plugin.toml` (`schema = 1`, `id = "periscope"`):
 
 - **Host half** (`host.luau`, in the session daemon): `tern.block.define(id, { init, view, key, event, save, title })`.
-  Blocks are panes whose state and view are Lua. Every handler has a **2 s budget**. Defines `list`, `split` (the same
-  block opened in the split layout) and `transcript` (palette-hidden; opened by the window half).
+  Blocks are panes whose state and view are Lua. Every handler has a **2 s budget**. Defines `list` (opens in the
+  split layout by default; saved `layout = "list"` is honoured) and `transcript` (palette-hidden; opened by the
+  window half). The session picker popup is drawn by the host in the `layer` region (`with_popup`), not by Tern.
 - **Window half** (`window.luau`, one per Tern window): the `ctrl+alt+s` command and the `tern.route.link` claim for
   `tern-periscope://transcript?path=…&label=…`. Only this half can place panes (`cx.layout:split`).
 - **Host → window** goes through `cx:open("tern-periscope://…")` (producer `open_below` in `host.luau`, consumer
@@ -32,7 +33,7 @@ Two Luau VMs, declared in `plugin.toml` (`schema = 1`, `id = "periscope"`):
 
 | Path | Purpose |
 | --- | --- |
-| `plugin.toml` | Manifest: `host`, `window`, `styles = ["periscope.css"]`, `[[blocks]]` (`list`, `split`, `transcript`) |
+| `plugin.toml` | Manifest: `host`, `window`, `styles = ["periscope.css"]`, `[[blocks]]` (`list`, `transcript`) |
 | `host.luau` | Block definitions, list/split/transcript views, key and event handlers, the refresh loop |
 | `window.luau` | `ctrl+alt+s` command; `tern-periscope://` route that splits a pane |
 | `lib/agents.luau` | Session discovery, digest parsing, status rules (`classify`, `STALE_MS`) |

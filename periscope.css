@@ -35,24 +35,31 @@
 	pointer-events: auto;
 	background: var(--card); /* opaque: --panel is translucent in glass windows and the transcript shows through */
 	box-shadow: 0 1px 0 var(--l2);
+	border-radius: 10px;
 	padding-top: 4px;
 	padding-bottom: 4px;
 }
 
+/* The list view draws nothing in the layer (until the session picker opens): no empty bar. */
+.sf-layer[data-surface^='plugin.periscope.']:empty {
+	display: none;
+}
+
+/* The invisible copy is 8px taller than the drawn header: a small break between header and body. */
 .sf-main[data-surface^='plugin.periscope.'] [data-role='periscope.spacer'] {
 	visibility: hidden;
 	padding-top: 4px;
-	padding-bottom: 4px;
+	padding-bottom: 12px;
 }
 
 /* Entries revealed by the keyboard land below the header, not under it (room for the bar and the description). */
 .sf-main[data-surface^='plugin.periscope.'] {
-	scroll-padding-top: 88px;
+	scroll-padding-top: 96px;
 }
 
 /* In the split view the layer is the picker plus the header, so revealed entries need more room. */
 .sf-main[data-surface^='plugin.periscope.'][data-role='periscope.split'] {
-	scroll-padding-top: 312px;
+	scroll-padding-top: 324px;
 }
 
 /* Split view picker: three rows, then it scrolls. Rows are a fixed 40px (below), so three rows have a
@@ -61,7 +68,9 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--sub-row-gap, 6px);
-	max-height: var(--sub-rows-h, 132px); /* 3 rows of 40px + 2 gaps of 6px */
+	box-sizing: border-box;
+	padding: 4px 2px; /* room for the rows' 1px ring, which the scroller would clip */
+	max-height: var(--sub-rows-h, 140px); /* 3 rows of 40px + 2 gaps of 6px + 2 × 4px padding */
 }
 
 .sf-layer[data-surface^='plugin.periscope.'] [data-role='periscope.rows'] {
@@ -184,6 +193,7 @@
 [data-role='periscope.bar'] {
 	flex-wrap: wrap;
 	row-gap: 2px;
+	padding: 0 8px; /* the same inset as the picker panel and the transcript entries */
 }
 
 [data-role='periscope.bar'] > * {
@@ -196,5 +206,47 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	padding: 2px 0 0;
+	padding: 2px 8px 0;
+}
+
+/* Session picker popup: drawn in the layer region over the top of the block; the list scrolls. */
+[data-surface^='plugin.periscope.'] [data-role='periscope.popup'] {
+	padding: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+[data-surface^='plugin.periscope.'] [data-role='periscope.sessions'] {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	max-height: 264px;
+	overflow-y: auto;
+}
+
+[data-surface^='plugin.periscope.'] [data-role='periscope.session'] {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 10px;
+	box-sizing: border-box;
+	height: 36px;
+	padding: 0 8px;
+	border-radius: var(--r-chip);
+	box-shadow: 0 0 0 1px var(--l2);
+	overflow: hidden;
+	cursor: pointer;
+}
+
+[data-surface^='plugin.periscope.'] [data-role='periscope.session'] [data-role='periscope.name'] {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+[data-surface^='plugin.periscope.'] [data-role='periscope.session'][data-mark='pick'] {
+	box-shadow: 0 0 0 2px var(--sub-accent);
 }
