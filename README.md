@@ -39,7 +39,7 @@ Requires Tern with plugin support, omp, and on the machine running the Tern daem
 | `Esc` | — | Back to the list |
 | `Space` | Open the transcript | Fold or unfold the tool or long Response (over 12 lines) under the cursor; clicking its head does the same |
 | `c` / `e` | — | Tool output **Collapsed** / **Expanded**; press again to return to Preview |
-| `G` / `g` | — | Follow the newest entry / jump to the top |
+| `G` / `g` | — | Follow the newest entry (the view then tracks new output) / jump to the top. Following is off until you press `G`, or move down onto the last entry; moving up turns it off. A transcript lands on its newest entry when first shown, then stays put as it grows |
 | `p`, `r` | — | Load earlier history / reload |
 | `s` / `S` | Switch to the next / previous omp session of this directory (wraps around) | Same (leaves the transcript) |
 | **Sessions** button | Open the session picker (see below) | — |
