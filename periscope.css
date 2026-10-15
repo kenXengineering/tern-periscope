@@ -73,6 +73,12 @@
 	max-height: var(--sub-rows-h, 140px); /* 3 rows of 40px + 2 gaps of 6px + 2 × 4px padding */
 }
 
+/* Thoughts (the model's reasoning) read in italics, as in omp. */
+[data-surface^='plugin.periscope.'] [data-role='periscope.thought'],
+[data-surface^='plugin.periscope.'] [data-role='periscope.thought'] * {
+	font-style: italic;
+}
+
 .sf-layer[data-surface^='plugin.periscope.'] [data-role='periscope.rows'] {
 	overflow-y: auto;
 }
