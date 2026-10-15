@@ -368,7 +368,7 @@ end
 -- A tool result as the richest node that fits it: a diff, a JSON tree, highlighted code for a file
 -- read, else ANSI text. Colors come from Tern's theme in every case.
 local function result_node(entry: Entry, text: string): Node
-	local args = entry.args or {}
+	local args: { [string]: any } = entry.args or {}
 	local path = if type(args.path) == "string" then args.path else nil
 	local trimmed = string.match(text, "^%s*(.-)%s*$") or text
 	if string.match(trimmed, "^diff %-%-git ") or string.match(trimmed, "^%-%-%- .-\n%+%+%+ ") or string.match(trimmed, "^@@ .- @@") then
