@@ -62,7 +62,7 @@ tern.command({
 	id = "show",
 	title = "Show Periscope beside",
 	icon = "eye",
-	keys = { "ctrl+alt+s" },
+	keys = { "ctrl+alt+p" },
 	run = function(cx)
 		local args: { string } = {}
 		local focused = cx.session:focused()

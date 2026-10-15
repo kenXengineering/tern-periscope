@@ -25,8 +25,8 @@ Update with `tern plugin install github.com/kenXengineering/tern-periscope --for
 `tern plugin remove periscope`. To work on a checkout instead, use `tern plugin link /path/to/tern-periscope`
 (Tern reloads it on save).
 
-Then press `⌃⌥S`, or open the command palette and run **New Periscope block** (it opens in the split view)
-from the pane where omp runs. The block takes that pane's directory. With `⌃⌥S`, when a pane in the same tab runs
+Then press `⌃⌥P`, or open the command palette and run **New Periscope block** (it opens in the split view)
+from the pane where omp runs. The block takes that pane's directory. With `⌃⌥P`, when a pane in the same tab runs
 omp, Periscope takes that pane's directory and shows that pane's omp session: it matches the session title omp puts in
 the terminal title. The palette command has no tab context and shows the directory's newest session. If no pane matches,
 the newest session shows too; `s` / `S` or the picker choose another.
@@ -38,7 +38,7 @@ Requires Tern with plugin support, omp, and on the machine running the Tern daem
 
 | Input | In the list | In a transcript |
 | --- | --- | --- |
-| `⌃⌥S` (anywhere) | Open a Periscope list beside the focused pane, in its directory | — |
+| `⌃⌥P` (anywhere) | Open a Periscope list beside the focused pane, in its directory | — |
 | Click a row, `Enter` | Open the transcript in place (in this block) | — |
 | `⌘`-click (or `⌃`-click), `⌘Enter`, `o` | Open the transcript in a new block **below** this one | — |
 | `↑` `↓` / `j` `k` | Move the selection (the first row is selected by default) | Scroll: move the cursor entry |

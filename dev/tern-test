@@ -3,7 +3,7 @@
 # the periscope plugin, so a smoke test never touches your real Tern config or plugins.
 #
 #   dev/tern-test [DIR]        open Tern in DIR (default: the current directory)
-#   dev/tern-test-ctl CMD …    drive that instance:  key ctrl+alt+s | click X Y [cmd] | shot NAME | quit
+#   dev/tern-test-ctl CMD …    drive that instance:  key ctrl+alt+p | click X Y [cmd] | shot NAME | quit
 #
 # Env: TERN_TEST_DIR  config dir of the isolated instance (default ~/.cache/tern-periscope-test)
 #
