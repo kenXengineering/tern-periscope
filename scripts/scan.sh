@@ -3,7 +3,7 @@
 # runs this through tern.process.run, off the Luau worker, because Luau has no stat,
 # no seek and a 2 s per-call budget.
 #
-#   scan.sh sessions BUCKET        newest-first main sessions: "TAB name TAB title-line"
+#   scan.sh sessions BUCKET        newest-first main sessions: "TAB name TAB subagent-count TAB title-line"
 #   scan.sh sizes DIR              "now EPOCH", then "SIZE TAB NAME" per agent transcript
 #   scan.sh init DIR NAME...       per agent: "@@ TAB NAME" + its session_init line
 #   scan.sh agent DIR NAME...      per agent: "@@ TAB NAME" + agent.awk's digest
@@ -24,9 +24,20 @@ sessions)
 	# ls -t sorts by mtime: the session written last is first.
 	ls -t "$dir" 2>/dev/null | while IFS= read -r name; do
 		case "$name" in
-		*.jsonl) printf '%s\t%s\n' "$name" "$(head -n 1 "$dir/$name" | cut -c1-400)" ;;
+		*.jsonl)
+			# subagent transcripts live in the directory named like the session
+			n=0
+			for f in "$dir/${name%.jsonl}"/*.jsonl; do
+				[ -f "$f" ] || continue
+				case "${f##*/}" in
+				__advisor*) ;;
+				*) n=$((n + 1)) ;;
+				esac
+			done
+			printf '%s\t%s\t%s\n' "$name" "$n" "$(head -n 1 "$dir/$name" | cut -c1-400)"
+			;;
 		esac
-	done | head -n 12
+	done | head -n 50
 	;;
 sizes)
 	echo "now $(date +%s)"
