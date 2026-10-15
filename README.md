@@ -13,6 +13,14 @@ own session files.
 tern plugin install github.com/kenXengineering/tern-periscope
 ```
 
+> **`main` is the development version.** It is live: commits land on it directly and it may break from time to time.
+> For a stable install, use a tagged release (see [Releases](https://github.com/kenXengineering/tern-periscope/releases)):
+>
+> ```sh
+> git clone --branch <tag> --depth 1 https://github.com/kenXengineering/tern-periscope /tmp/tern-periscope
+> tern plugin install /tmp/tern-periscope
+> ```
+
 Update with `tern plugin install github.com/kenXengineering/tern-periscope --force`; remove with
 `tern plugin remove periscope`. To work on a checkout instead, use `tern plugin link /path/to/tern-periscope`
 (Tern reloads it on save).
