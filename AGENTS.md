@@ -125,6 +125,33 @@ dev/tern-test-ctl quit
 - `tern ctl run` takes **one** argument (quote the command line or put it in a script).
 - Needs real omp sessions for the directory you open (`~/.omp/agent/sessions/…`).
 
+## CI & Releases
+
+`.github/workflows/ci.yml` runs on pull requests, pushes to `main` and (as a reusable workflow) before every release:
+
+| Job | Checks |
+| --- | --- |
+| `luau` | `luau-lsp analyze` (pinned release + SHA-256) against `.github/tern.d.luau`, a **pinned copy** of `tern plugin types DIR`: refresh it by hand when Tern updates |
+| `manifest` | `.github/scripts/check-manifest.py`: `schema = 1`, semver `version`, referenced files exist, every `[[blocks]]` id is defined in `host.luau` |
+| `shell` (Linux, macOS) | `sh -n` / `bash -n` / `dash -n`; ShellCheck (Linux, warnings and up) |
+| `awk` (Linux, macOS) | `scripts/agent.awk` on `.github/fixtures/agent.jsonl` under `awk`, `gawk`, `mawk` must equal `agent.expected` (change both together) |
+| `tests` (Linux, macOS) | `tests/run.sh`, once it exists (issue #1) |
+
+Actions are pinned by commit SHA; Dependabot keeps them current. Run the same checks locally with the commands under
+Development Commands, plus `python3 .github/scripts/check-manifest.py`.
+
+**Cut a release** (semver; prereleases like `0.2.0-rc1` are fine):
+
+1. Set `version` in `plugin.toml` (e.g. `0.2.0` or `0.2.0-rc1`) and push it to `main`.
+2. `git tag v0.2.0 && git push origin v0.2.0`.
+
+`.github/workflows/release.yml` then runs CI, checks that the tag is semver, equals `v` + the `plugin.toml` version and is
+on `main`, and builds `tern-periscope-<version>.tar.gz` / `.zip` with `git archive` (`.gitattributes` leaves out `.github`,
+`dev`, `AGENTS.md`) plus `SHA256SUMS`. It publishes a GitHub release with those files and a changelog of the commits
+since the previous release (a final release compares with the last final release; a prerelease with the last tag).
+A tag containing `-` is marked as a prerelease and never becomes "latest". A mismatched tag fails the workflow before
+anything is published.
+
 ## Git Workflow
 
 - Remote `origin` = `git@github.com:kenXengineering/tern-periscope.git`, default branch `main`. `main` is the live

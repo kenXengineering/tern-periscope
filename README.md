@@ -20,6 +20,9 @@ tern plugin install github.com/kenXengineering/tern-periscope
 > git clone --branch <tag> --depth 1 https://github.com/kenXengineering/tern-periscope /tmp/tern-periscope
 > tern plugin install /tmp/tern-periscope
 > ```
+>
+> Each release carries `tern-periscope-<version>.tar.gz` / `.zip` and `SHA256SUMS`; versions are semver and prereleases
+> look like `v0.2.0-rc1`.
 
 Update with `tern plugin install github.com/kenXengineering/tern-periscope --force`; remove with
 `tern plugin remove periscope`. To work on a checkout instead, use `tern plugin link /path/to/tern-periscope`
