@@ -1,0 +1,92 @@
+name: Release
+
+# Push a tag vX.Y.Z (or a prerelease such as vX.Y.Z-rc1) to cut a release. The tag must equal
+# "v" + `version` in plugin.toml and point at a commit on main. See AGENTS.md.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: Build and publish
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Validate the tag
+        run: |
+          semver='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+          if ! [[ "$GITHUB_REF_NAME" =~ $semver ]]; then
+            echo "::error::tag $GITHUB_REF_NAME is not semver (vX.Y.Z or vX.Y.Z-rc1)"; exit 1
+          fi
+          version=$(python3 -c 'import tomllib; print(tomllib.load(open("plugin.toml","rb"))["version"])')
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match plugin.toml version $version"; exit 1
+          fi
+          git fetch -q origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$GITHUB_REF_NAME is not on main"; exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          case "$version" in *-*) echo "PRERELEASE=true" >> "$GITHUB_ENV" ;; *) echo "PRERELEASE=false" >> "$GITHUB_ENV" ;; esac
+
+      - name: Build the package
+        run: |
+          name="tern-periscope-$VERSION"
+          mkdir dist
+          git archive --format=tar.gz --prefix="$name/" -o "dist/$name.tar.gz" "$GITHUB_REF_NAME"
+          git archive --format=zip --prefix="$name/" -o "dist/$name.zip" "$GITHUB_REF_NAME"
+          tar -tzf "dist/$name.tar.gz" | grep -q "^$name/plugin.toml$"
+          if tar -tzf "dist/$name.tar.gz" | grep -E "^$name/(\.github|dev|AGENTS.md)"; then
+            echo "::error::dev files leaked into the package"; exit 1
+          fi
+          (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS)
+
+      - name: Write the changelog
+        run: |
+          # Previous release: a final release compares with the last final one, a prerelease with the last tag.
+          # versionsort.suffix=- sorts vX.Y.Z-rc1 before vX.Y.Z.
+          prev=""
+          for t in $(git -c versionsort.suffix=- tag --list 'v*' --sort=-v:refname); do
+            [ "$t" = "$GITHUB_REF_NAME" ] && continue
+            if [ "$PRERELEASE" = false ]; then case "$t" in *-*) continue ;; esac; fi
+            if git merge-base --is-ancestor "$t" "$GITHUB_REF_NAME" 2>/dev/null && [ "$(git rev-parse "$t^{commit}")" != "$(git rev-parse "$GITHUB_REF_NAME^{commit}")" ]; then prev=$t; break; fi
+          done
+          if [ -n "$prev" ]; then range="$prev..$GITHUB_REF_NAME"; else range="$GITHUB_REF_NAME"; fi
+          {
+            echo "## Changes"
+            echo
+            git log --no-merges --pretty='- %s (%h)' "$range"
+            echo
+            if [ -n "$prev" ]; then echo "Full diff: https://github.com/$GITHUB_REPOSITORY/compare/$prev...$GITHUB_REF_NAME"; fi
+            echo
+            echo "## Install"
+            echo
+            echo "Download \`tern-periscope-$VERSION.tar.gz\` (or \`.zip\`), check it against \`SHA256SUMS\`, unpack it and run:"
+            echo
+            echo '```sh'
+            echo "tern plugin install ./tern-periscope-$VERSION"
+            echo '```'
+            if [ "$PRERELEASE" = true ]; then echo; echo "This is a prerelease."; fi
+          } > notes.md
+          cat notes.md
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags="--verify-tag --title $GITHUB_REF_NAME --notes-file notes.md"
+          if [ "$PRERELEASE" = true ]; then flags="$flags --prerelease"; else flags="$flags --latest"; fi
+          # shellcheck disable=SC2086
+          gh release create "$GITHUB_REF_NAME" $flags dist/*

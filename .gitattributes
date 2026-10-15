@@ -1,0 +1,6 @@
+# Left out of release archives (git archive): the package is the plugin itself.
+.github export-ignore
+dev export-ignore
+.gitattributes export-ignore
+.gitignore export-ignore
+AGENTS.md export-ignore
