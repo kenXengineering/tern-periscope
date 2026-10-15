@@ -127,7 +127,8 @@ dev/tern-test-ctl quit
 
 ## Git Workflow
 
-- Remote `origin` = `git@github.com:kenXengineering/tern-periscope.git`, default branch `main`. Work on a branch
-  (`feat/<kebab>`, `fix/<kebab>`, `docs/<kebab>`) and open a PR with `gh pr create --base main`; do not commit on `main`.
+- Remote `origin` = `git@github.com:kenXengineering/tern-periscope.git`, default branch `main`. `main` is the live
+  development version and may break; it accepts direct pushes from the owner. Larger features still go through a
+  branch (`feat/<kebab>`, `fix/<kebab>`, `docs/<kebab>`) and a PR (`gh pr create --base main`). Stable installs use tags.
 - Commit subjects: sentence-case imperative, no prefixes (`Add split view to the list block`).
 - Keep the README (keys table, Limits) and this file in step with behaviour changes.
