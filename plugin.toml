@@ -1,7 +1,7 @@
 schema = 1
 id = "periscope"
 name = "Periscope"
-version = "0.1.0"
+version = "0.1.0-rc1"
 description = "Peek into live omp subagents from a Tern block: status list, in-place transcripts, and a split view."
 icon = "eye"
 host = "host.luau"
