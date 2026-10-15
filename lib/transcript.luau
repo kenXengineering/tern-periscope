@@ -349,7 +349,7 @@ local function entry_body(v: Viewer, entry: Entry, index: number): Node
 		return with(card, { key = key, tone = "user", collapsible = true, collapsed = not open, mark = marked, actions = click })
 	elseif entry.kind == "thinking" then
 		local section = ui.node("section", { head = { ui.span("Thought", "muted em") } }, {
-			ui.node("md", { text = entry.text }),
+			with(ui.node("md", { text = entry.text }), { role = "periscope.thought" }),
 		})
 		return with(section, { key = key, collapsible = true, collapsed = not open, mark = marked, actions = click })
 	elseif entry.kind == "tool" then

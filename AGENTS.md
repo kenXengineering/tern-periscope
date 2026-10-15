@@ -16,7 +16,9 @@ Two Luau VMs, declared in `plugin.toml` (`schema = 1`, `id = "periscope"`):
   split layout by default; saved `layout = "list"` is honoured) and `transcript` (palette-hidden; opened by the
   window half). The session picker popup is drawn by the host in the `layer` region (`with_popup`), not by Tern.
 - **Window half** (`window.luau`, one per Tern window): the `ctrl+alt+s` command and the `tern.route.link` claim for
-  `tern-periscope://transcript?path=…&label=…`. Only this half can place panes (`cx.layout:split`).
+  `tern-periscope://transcript?path=…&label=…`. Only this half can place panes (`cx.layout:split`). The command also
+  picks the tab's omp pane (private-use glyph in its title) and passes its cwd and title as block args; the host matches
+  the title to a session (`agents.title_key`) while nothing is pinned.
 - **Host → window** goes through `cx:open("tern-periscope://…")` (producer `open_below` in `host.luau`, consumer
   `window.luau`, query encoding in `lib/util.luau`).
 - **Filesystem and process access**: Luau has no `stat`/seek. All reads go through `lib/util.luau` `scan()` →

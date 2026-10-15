@@ -43,7 +43,21 @@ tern.route.link(function(link, cx)
 	return { handled = true }
 end)
 
--- Opens a Periscope list beside the focused pane, in that pane's directory.
+local function private_use(text: string): boolean
+	local ok, found = pcall(function()
+		for _, cp in utf8.codes(text) do
+			if (cp >= 0xE000 and cp <= 0xF8FF) or cp >= 0xF0000 then
+				return true
+			end
+		end
+		return false
+	end)
+	return ok and found == true
+end
+
+-- Opens a Periscope list beside the focused pane, in that pane's directory. When a pane of the same
+-- tab runs omp (its terminal title starts with a private-use status glyph then the session title),
+-- the block takes that pane's directory and shows that session.
 tern.command({
 	id = "show",
 	title = "Show Periscope beside",
@@ -52,13 +66,26 @@ tern.command({
 	run = function(cx)
 		local args: { string } = {}
 		local focused = cx.session:focused()
-		if focused ~= nil then
-			for _, p in cx.session:panes() do
-				local cwd = p.cwd
-				if p.pane == focused and cwd ~= nil and cwd ~= "" then
-					args = { cwd }
+		local panes = cx.session:panes()
+		local tab: number? = nil
+		for _, p in panes do
+			if p.pane == focused then
+				tab = p.tab
+				if p.cwd ~= nil and p.cwd ~= "" then
+					args = { p.cwd }
 				end
 			end
+		end
+		local omp: PaneInfo? = nil
+		for _, p in panes do
+			if tab ~= nil and p.tab == tab and p.cwd ~= "" and private_use(p.title) then
+				if omp == nil or p.pane == focused then
+					omp = p
+				end
+			end
+		end
+		if omp ~= nil then
+			args = { omp.cwd or "", omp.title }
 		end
 		if cx:new_block("periscope.list", args, "beside") == nil then
 			cx:toast("error", "Periscope: could not open the block")

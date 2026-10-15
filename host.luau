@@ -66,7 +66,8 @@ type ListState = {
 	cwd: string?,
 	bucket: string?,
 	sessions: { Session },
-	pinned: string?, -- session id chosen with `s`; nil follows the newest
+	pinned: string?, -- session id chosen with `s`/the picker; nil follows `want`, then the newest
+	want: string?, -- title of the omp session running in the tab this block opened from (agents.title_key)
 	session: Session?,
 	agents: { [string]: Agent },
 	sizes: { [string]: number },
@@ -338,6 +339,14 @@ local function scan(state: ListState, cx: BlockCx, done: () -> ())
 		state.sessions = sessions
 		local choices = listed(state)
 		local pick: Session? = choices[1]
+		if state.pinned == nil and state.want ~= nil then
+			for _, s in choices do
+				if agents.title_key(s.title) == state.want then
+					pick = s
+					break
+				end
+			end
+		end
 		if state.pinned ~= nil then
 			for _, s in choices do
 				if s.id == state.pinned then
@@ -886,11 +895,13 @@ end
 local list: BlockDef<ListState> = {
 	init = function(cx, args, saved)
 		local cwd = args[1] or cx.cwd
+		local want = if args[2] ~= nil then agents.title_key(args[2]) else nil
 		local state: ListState = {
 			cwd = cwd,
 			bucket = if cwd ~= nil then agents.bucket(cwd) else nil,
 			sessions = {},
 			pinned = if saved ~= nil then saved.pinned else nil,
+			want = if want ~= nil and want ~= "" then want else nil,
 			session = nil,
 			agents = {},
 			sizes = {},

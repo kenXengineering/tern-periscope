@@ -72,6 +72,13 @@ local function plain(text: string): string
 	return table.concat(out)
 end
 
+-- A title reduced for comparison: no private-use glyphs, no surrounding blanks. omp puts a status
+-- glyph before the session title in the terminal title, so only the glyph-free text matches.
+function M.title_key(text: string): string
+	local trimmed = string.match(plain(text), "^%s*(.-)%s*$")
+	return trimmed or ""
+end
+
 -- Where omp keeps sessions: the session-dir override, the agent-dir override, or ~/.omp/agent.
 function M.sessions_root(): string?
 	local override = tern.getenv("PI_CODING_AGENT_SESSION_DIR")

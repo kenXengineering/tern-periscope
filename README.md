@@ -18,7 +18,10 @@ Update with `tern plugin install github.com/kenXengineering/tern-periscope --for
 (Tern reloads it on save).
 
 Then press `⌃⌥S`, or open the command palette and run **New Periscope block** (it opens in the split view)
-from the pane where omp runs. The block takes that pane's directory.
+from the pane where omp runs. The block takes that pane's directory. With `⌃⌥S`, when a pane in the same tab runs
+omp, Periscope takes that pane's directory and shows that pane's omp session: it matches the session title omp puts in
+the terminal title. The palette command has no tab context and shows the directory's newest session. If no pane matches,
+the newest session shows too; `s` / `S` or the picker choose another.
 
 Requires Tern with plugin support, omp, and on the machine running the Tern daemon a POSIX `sh` plus `awk`, `grep`,
 `head`, `ls`, `wc`, `tail`, `date`, `cut` and `tr` (macOS, Linux).
