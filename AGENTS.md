@@ -83,7 +83,7 @@ sh -n scripts/scan.sh
 
 ### Shell / awk (`scripts/`)
 - POSIX `sh` only; the header lists every subcommand and the tools used (keep it truthful: `sh awk grep head ls wc tail
-  date cut tr`).
+  date cut tr find`).
 - Output is tab-separated records, `@@<TAB>name` frames per item. Read-only; never write files.
 - In awk, a regex literal passed as a function argument means `$0 ~ /re/` (a 0/1). Pass strings, or use `index`/`substr`.
 
