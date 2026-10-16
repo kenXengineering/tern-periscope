@@ -20,7 +20,16 @@
 [data-surface^='plugin.periscope.'] [data-role='periscope.filter'][data-mark='on'] {
 	background: var(--accent-fill);
 	color: #fff;
-	font-weight: 600;
+}
+
+
+/* The Split view / List view button keeps one width, so the label swap does not move the buttons beside it. */
+[data-surface^='plugin.periscope.'] [data-role='periscope.layout'] {
+	cursor: pointer;
+	display: flex;
+	justify-content: center;
+	box-sizing: border-box;
+	width: 70px;
 }
 
 /* Transcript header and split-view picker. They are drawn in the layer region (over the pane,
@@ -108,6 +117,18 @@
 
 [data-surface^='plugin.periscope.'] [data-role='periscope.rows'] [data-role='periscope.row'] {
 	margin-bottom: 0; /* the picker spaces its rows with flex gap */
+}
+
+/* The list view's rows: spaced and inset like the split view's picker (flex gap, 8px + 2px sideways). */
+[data-surface^='plugin.periscope.'] [data-role='periscope.list'] {
+	display: flex;
+	flex-direction: column;
+	gap: var(--sub-row-gap, 6px);
+	padding: 4px 10px;
+}
+
+[data-surface^='plugin.periscope.'] [data-role='periscope.list'] > [data-role='periscope.row'] {
+	margin-bottom: 0;
 }
 
 [data-surface^='plugin.periscope.'] [data-role='periscope.rows'] > * {
@@ -206,6 +227,40 @@
 	white-space: nowrap;
 }
 
+/* Session title in the header: takes the leftover width and ellipsizes; the buttons keep theirs. */
+[data-role='periscope.bar'] > [data-role='periscope.title'],
+[data-role='periscope.panel'] > * > [data-role='periscope.title'] {
+	flex: 1 1 0;
+	min-width: 80px;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+/* List view header and rows sit exactly where the split view's picker puts them (checked with
+   `dev/tern-test-ctl tree`: same header y, button right edge, and first row rect), so switching moves nothing. */
+[data-surface^='plugin.periscope.'] [data-role='periscope.listhead'] {
+	padding-right: 0;
+	margin-top: -2px; /* the list sits under Tern's top bar; the split header is in the layer, above it */
+}
+
+[data-surface^='plugin.periscope.'] [data-role='periscope.list'] {
+	margin-top: -10px; /* offsets the header's move, so rows land where the split picker's do */
+}
+
+/* A thin rule closing the transcript header, so the header reads apart from the body scrolling under it.
+   (Blank text node only so Tern mounts it; both header copies carry it, so heights stay equal.) */
+[data-surface^='plugin.periscope.'] [data-role='periscope.rule'] {
+	height: 2px;
+	min-height: 2px;
+	margin: 4px 8px 0;
+	overflow: hidden;
+	font-size: 0;
+	border-radius: 1px;
+	background: var(--sub-accent);
+	opacity: 0.5;
+}
+
 /* The agent's short task description, under the bar: one ellipsized line, full text as tooltip. */
 [data-role='periscope.desc'] {
 	display: block;
@@ -215,9 +270,10 @@
 	padding: 2px 8px 0;
 }
 
-/* Session picker popup: drawn in the layer region over the top of the block; the list scrolls. */
+/* Session picker: in the layer's flow. In the split view it sits between the agent picker and the
+   transcript header (a break bar on each side); elsewhere it follows the header. The list scrolls. */
 [data-surface^='plugin.periscope.'] [data-role='periscope.popup'] {
-	padding: 8px;
+	padding: 0 8px;
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
@@ -229,6 +285,7 @@
 	gap: 6px;
 	max-height: 264px;
 	overflow-y: auto;
+	padding: 3px; /* room for the rows' box-shadow rings, which the scroll container would clip */
 }
 
 [data-surface^='plugin.periscope.'] [data-role='periscope.session'] {

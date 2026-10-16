@@ -643,8 +643,13 @@ local function filter_badges(state: ListState, n: { [string]: number }): { Node 
 	return out
 end
 
+-- A dim pipe between button groups that act independently (filters | sessions | layout).
+local function sep(key: string): Node
+	return with(ui.text({ ui.span("|", "dim") }), { key = key })
+end
+
 local function layout_badge(label: string, mode: string): Node
-	return with(ui.badge(label, "neutral"), { key = "layout", role = "periscope.filter", actions = { click = "layout=" .. mode } })
+	return with(ui.badge(label, "neutral"), { key = "layout", role = "periscope.layout", actions = { click = "layout=" .. mode } })
 end
 
 -- The "Sessions N" button that opens the session picker.
@@ -699,31 +704,38 @@ local function session_popup(state: ListState): Node
 	return with(ui.col({ head, with(ui.col(rows), { key = "sessions", role = "periscope.sessions" }) }), { key = "popup", role = "periscope.popup" })
 end
 
--- Draws the session picker above `view` when it is open.
-local function with_popup(state: ListState, view: BlockView): BlockView
-	if not state.picking then
-		return view
+-- The session picker when it is open (nil otherwise): the last child of the layer column.
+local function popup_of(state: ListState): Node?
+	return if state.picking then session_popup(state) else nil
+end
+
+-- The layer region's column; the popup joins it as a sibling, not a wrapper, so nothing shifts.
+local function layer_col(kids: { Node }, popup: Node?): Node
+	if popup ~= nil then
+		table.insert(kids, popup)
 	end
-	local popup = session_popup(state)
-	local below = view.layer
-	view.layer = with(ui.col(if below ~= nil then { below, popup } else { popup }), { role = "periscope.layer" })
-	return view
+	return with(ui.col(kids), { role = "periscope.layer" })
+end
+
+-- The session's title after "Periscope": dim, one line, cut with an ellipsis before it reaches the buttons.
+local function session_title(session: Session?): Node
+	local title = if session ~= nil then session.title else ""
+	return with(ui.text({ ui.span(title, "muted") }), { role = "periscope.title", key = "title", title = title })
 end
 
 local function list_view(state: ListState): BlockView
 	local n = counts(state)
 	local session = state.session
-	local head: { Span } = { ui.span("Periscope", "strong") }
-	if session ~= nil and session.title ~= "" then
-		table.insert(head, ui.span("  " .. session.title, "muted"))
-	end
-	local bar: { Node } = { ui.text(head) }
+	local bar: { Node } = { ui.text({ ui.span("Periscope", "strong") }) }
+	table.insert(bar, session_title(session))
 	for _, b in filter_badges(state, n) do
 		table.insert(bar, b)
 	end
+	table.insert(bar, sep("sep1"))
 	table.insert(bar, sessions_badge(state))
+	table.insert(bar, sep("sep2"))
 	table.insert(bar, layout_badge("Split view", "split"))
-	local header = ui.row(bar)
+	local header = with(ui.col({ with(ui.row(bar), { role = "periscope.bar", key = "bar" }) }), { role = "periscope.listhead", key = "head" })
 	local body: { Node } = {}
 	if state.error ~= nil then
 		table.insert(body, ui.text({ ui.span("Scan failed: ", "error"), ui.span(state.error, "muted") }))
@@ -742,13 +754,15 @@ local function list_view(state: ListState): BlockView
 	if #rows == 0 and n.all > 0 then
 		table.insert(body, ui.text({ ui.span("No " .. string.lower(state.filter) .. " subagents.", "muted") }))
 	end
-	table.insert(body, with(ui.col(rows), { key = "agents", role = "periscope.panel" }))
+	table.insert(body, with(ui.col(rows), { key = "agents", role = "periscope.list" }))
 	local hint = "↑↓ select · click / enter open here · ⌘click / ⌘enter / o open below · l split view · f filter"
 	if #listed(state) > 1 then
 		hint ..= " · s/S next/previous session"
 	end
+	local popup = popup_of(state)
 	return {
 		main = ui.col({ header, with(ui.col(body), { key = "body" }) }),
+		layer = if popup ~= nil then layer_col({}, popup) else nil,
 		dock = ui.row({ ui.text({ ui.span(hint, "muted") }) }),
 	}
 end
@@ -760,6 +774,7 @@ local function header_block(bar: () -> { Node }, desc: string?, role: string?): 
 	if desc ~= nil and desc ~= "" then
 		table.insert(kids, with(ui.text({ ui.span(desc, "muted") }), { role = "periscope.desc", key = "desc", title = desc }))
 	end
+	table.insert(kids, with(ui.col({ ui.text({ ui.span(" ") }) }), { role = "periscope.rule", key = "rule" }))
 	return with(ui.col(kids), { role = role, key = "header" })
 end
 
@@ -767,10 +782,10 @@ end
 -- sight are unmounted, so `position: sticky` cannot hold), hence the header is drawn in the
 -- `layer` region, over the pane, and `main` starts with an invisible copy of it that reserves
 -- the same height (see periscope.css).
-local function framed(v: Viewer, bar: () -> { Node }, desc: string?, dock: Node): BlockView
+local function framed(v: Viewer, bar: () -> { Node }, desc: string?, dock: Node, popup: Node?): BlockView
 	return {
 		main = transcript.main(v, { header_block(bar, desc, "periscope.spacer") }),
-		layer = with(ui.col({ header_block(bar, desc, "periscope.header") }), { role = "periscope.layer" }),
+		layer = layer_col({ header_block(bar, desc, "periscope.header") }, popup),
 		dock = dock,
 	}
 end
@@ -799,7 +814,7 @@ local function transcript_view(state: ListState, v: Viewer): BlockView
 		end
 		return nodes
 	end
-	return framed(v, bar, if a then a.task else nil, transcript.hints(v, "esc back · ←/→ agent"))
+	return framed(v, bar, if a then a.task else nil, transcript.hints(v, "esc back · ←/→ agent"), popup_of(state))
 end
 
 -- Facts about an agent for a header: status badge, then "N req · $cost · running time".
@@ -824,11 +839,13 @@ local function split_view(state: ListState): BlockView
 	local v = state.viewer
 	local a = if state.viewing ~= nil then state.agents[state.viewing] else nil
 	local function picker(limit: number?): Node
-		local head: { Node } = { ui.text({ ui.span("Periscope", "strong") }) }
+		local head: { Node } = { ui.text({ ui.span("Periscope", "strong") }), session_title(state.session) }
 		for _, b in filter_badges(state, n) do
 			table.insert(head, b)
 		end
+		table.insert(head, sep("sep1"))
 		table.insert(head, sessions_badge(state))
+		table.insert(head, sep("sep2"))
 		table.insert(head, layout_badge("List view", "list"))
 		local rows: { Node } = {}
 		for _, ag in visible(state) do
@@ -858,16 +875,20 @@ local function split_view(state: ListState): BlockView
 		end
 		return nodes
 	end
-	local function divider(): Node
-		return with(ui.col({ ui.text({ ui.span(" ") }) }), { role = "periscope.divider", key = "divider" })
+	local function divider(key: string?): Node
+		return with(ui.col({ ui.text({ ui.span(" ") }) }), { role = "periscope.divider", key = key or "divider" })
 	end
 	local desc = if a then a.task else nil
 	local spacer = with(ui.col({ picker(3), divider(), header_block(bar, desc, nil) }), { role = "periscope.spacer", key = "spacer" })
 	local main = with(if v ~= nil then transcript.main(v, { spacer }) else ui.col({ spacer }), { role = "periscope.split" })
-	local layer = with(
-		ui.col({ picker(nil), divider(), header_block(bar, desc, "periscope.header") }),
-		{ role = "periscope.layer" }
-	)
+	local popup = popup_of(state)
+	local kids: { Node } = { picker(nil), divider() }
+	if popup ~= nil then
+		table.insert(kids, popup)
+		table.insert(kids, divider("divider2"))
+	end
+	table.insert(kids, header_block(bar, desc, "periscope.header"))
+	local layer = layer_col(kids, nil)
 	local hint = "←→ pick agent · ↑↓ scroll · c/e output · space fold · g/G top/end · f filter · o open below · s/S session · l list view"
 	return { main = main, layer = layer, dock = ui.row({ ui.text({ ui.span(hint, "muted") }) }) }
 end
@@ -972,12 +993,12 @@ local list: BlockDef<ListState> = {
 
 	view = function(state, _cx)
 		if state.layout == "split" then
-			return with_popup(state, split_view(state))
+			return split_view(state)
 		end
 		if state.viewer ~= nil then
-			return with_popup(state, transcript_view(state, state.viewer))
+			return transcript_view(state, state.viewer)
 		end
-		return with_popup(state, list_view(state))
+		return list_view(state)
 	end,
 
 	key = function(state, key, cx)
