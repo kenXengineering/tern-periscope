@@ -1,0 +1,3 @@
+stats	0	1	0.001000	7	2026-01-01T10:00:01.000Z
+e	m	user	2026-01-01T10:00:01.000Z	
+e	m	assistant	2026-01-01T10:00:02.000Z	toolUse|read,grep,bash

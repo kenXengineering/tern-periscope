@@ -1,0 +1,17 @@
+{"type":"session_init","agent":"task","resolvedModel":"m","task":"Fixture","timestamp":"2026-01-01T09:59:00.000Z"}
+{"type":"message","id":"u1","timestamp":"2026-01-01T10:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}
+{"type":"message","id":"u2","timestamp":"2026-01-01T10:00:02.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}
+{"type":"message","id":"u3","timestamp":"2026-01-01T10:00:03.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}
+{"type":"message","id":"u4","timestamp":"2026-01-01T10:00:04.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}
+{"type":"message","id":"u5","timestamp":"2026-01-01T10:00:05.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}
+{"type":"message","id":"u6","timestamp":"2026-01-01T10:00:06.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}
+{"type":"message","id":"u7","timestamp":"2026-01-01T10:00:07.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}
+{"type":"message","id":"u8","timestamp":"2026-01-01T10:00:08.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}
+{"type":"message","id":"u9","timestamp":"2026-01-01T10:00:09.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}
+{"type":"message","id":"u10","timestamp":"2026-01-01T10:00:10.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}
+{"type":"message","id":"u11","timestamp":"2026-01-01T10:00:11.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}
+{"type":"message","id":"u12","timestamp":"2026-01-01T10:00:12.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}
+{"type":"message","id":"u13","timestamp":"2026-01-01T10:00:13.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}
+{"type":"message","id":"u14","timestamp":"2026-01-01T10:00:14.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}
+{"type":"message","id":"u15","timestamp":"2026-01-01T10:00:15.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}
+{"type":"message","id":"a16","timestamp":"2026-01-01T10:00:16.000Z","message":{"role":"assistant","content":[{"type":"text","text":"ok"}],"stopReason":"stop","usage":{"totalTokens":100,"cost":{"total":0.01}}}}

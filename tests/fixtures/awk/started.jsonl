@@ -1,0 +1,3 @@
+{"type":"session_init","task":"t","timestamp":"2026-01-01T08:00:00.000Z"}
+{"type":"thinking_level_change","thinkingLevel":"high","timestamp":"2026-01-01T08:30:00.000Z"}
+{"type":"message","id":"u3","timestamp":"2026-01-01T10:00:03.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}

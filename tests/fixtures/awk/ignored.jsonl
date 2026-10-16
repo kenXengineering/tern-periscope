@@ -1,0 +1,8 @@
+{"type":"session_init","agent":"task","resolvedModel":"m","task":"Fixture","timestamp":"2026-01-01T09:59:00.000Z"}
+{"type":"message","id":"u1","timestamp":"2026-01-01T10:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}
+{"type":"custom","customType":"tool_execution_end","toolName":"bash","endedAt":"2026-01-01T10:00:02.000Z"}
+{"type":"custom","customType":"ttsr_injection","data":{"kind":"x"}}
+{"type":"compaction","summary":"s","timestamp":"2026-01-01T10:00:03.000Z"}
+{"type":"custom_message","customType":"session_exit","recordedAt":"2026-01-01T10:00:04.000Z","kind":"signal"}
+{"type":"message_end","message":{"role":"assistant","stopReason":"stop"},"timestamp":"2026-01-01T10:00:05.000Z"}
+{"type":"model_change","model":"m2","timestamp":"2026-01-01T10:00:06.000Z"}
