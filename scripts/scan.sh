@@ -3,14 +3,14 @@
 # runs this through tern.process.run, off the Luau worker, because Luau has no stat,
 # no seek and a 2 s per-call budget.
 #
-#   scan.sh sessions BUCKET        newest-first main sessions: "TAB name TAB subagent-count TAB title-line"
+#   scan.sh sessions BUCKET        newest-first main sessions: "TAB name TAB subagent-count TAB running-count TAB title-line"
 #   scan.sh sizes DIR              "now EPOCH", then "SIZE TAB NAME" per agent transcript
 #   scan.sh init DIR NAME...       per agent: "@@ TAB NAME" + its session_init line
 #   scan.sh agent DIR NAME...      per agent: "@@ TAB NAME" + agent.awk's digest
 #   scan.sh size FILE              the file's size in bytes
 #   scan.sh tail FILE N            the file's last N lines
 #
-# Needs only POSIX sh, awk, grep, head, ls, wc, tail, date, cut, tr.
+# Needs only POSIX sh, awk, grep, head, ls, wc, tail, date, cut, tr, find.
 
 here=$(cd "$(dirname "$0")" && pwd)
 cmd=$1
@@ -34,7 +34,13 @@ sessions)
 				*) n=$((n + 1)) ;;
 				esac
 			done
-			printf '%s\t%s\t%s\n' "$name" "$n" "$(head -n 1 "$dir/$name" | cut -c1-400)"
+			# running = written in the last 45 min (STALE_MS in lib/agents.luau) and no session_exit at the end
+			r=0
+			if [ "$n" -gt 0 ]; then
+				r=$(find "$dir/${name%.jsonl}" -maxdepth 1 -name '*.jsonl' ! -name '__advisor*' -mmin -45 2>/dev/null |
+					while IFS= read -r f; do tail -n 5 "$f" | grep -q session_exit || echo x; done | wc -l | tr -d ' ')
+			fi
+			printf '%s\t%s\t%s\t%s\n' "$name" "$n" "$r" "$(head -n 1 "$dir/$name" | cut -c1-400)"
 			;;
 		esac
 	done | head -n 50
