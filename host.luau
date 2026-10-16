@@ -328,7 +328,7 @@ local function scan(state: ListState, cx: BlockCx, done: () -> ())
 		scan_agents()
 		return
 	end
-	util.scan({ "sessions", bucket }, function(out, err)
+	util.scan({ "sessions", bucket, tostring(agents.STALE_MS // 60000) }, function(out, err)
 		if out == nil then
 			return fail(err)
 		end
