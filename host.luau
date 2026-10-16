@@ -780,7 +780,7 @@ local function transcript_view(state: ListState, v: Viewer): BlockView
 	local a = state.viewing and state.agents[state.viewing]
 	local function bar(): { Node }
 		local nodes: { Node } = {
-			with(ui.badge("← Periscope", "accent"), { actions = { click = "back" }, key = "back" }),
+			with(ui.badge("← Back to agents", "accent"), { actions = { click = "back" }, key = "back", role = "periscope.filter", mark = "on" }),
 			ui.text({ ui.span(v.label, "strong") }),
 		}
 		if a then

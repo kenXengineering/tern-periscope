@@ -62,7 +62,7 @@ filter is saved with the block.
 Each list entry is one line at fixed columns: status glyph, name, mode (the agent definition, e.g. `task`), model,
 tools, requests, tokens, cost and running time. The agent's short task description is in the transcript header.
 
-Every transcript starts with a pinned header: `← Periscope` (back), the agent name, status, request count, cost and
+Every transcript starts with a pinned header: `← Back to agents` (filled button), the agent name, status, request count, cost and
 running time, then three output buttons, with the task description on a line below. The buttons are **Preview**
 (first 3 source lines of each tool output, the default; long lines still wrap), **Collapsed** (hidden) and
 **Expanded** (full). They apply to bash/shell and every other tool result; folding a single tool with `Space` or a
