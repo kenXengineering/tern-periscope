@@ -38,6 +38,8 @@
 .sf-layer[data-surface^='plugin.periscope.'] {
 	position: absolute;
 	inset: 0 0 auto 0;
+	max-height: 100%; /* a short pane scrolls the layer (header + open session picker) instead of cutting it off */
+	overflow-y: auto;
 }
 
 .sf-layer[data-surface^='plugin.periscope.'][data-role='periscope.layer'] {
