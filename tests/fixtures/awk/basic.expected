@@ -1,0 +1,7 @@
+stats	1	2	0.532300	2345	2026-01-01T10:00:01.000Z
+e	m	user	2026-01-01T10:00:01.000Z	
+e	m	assistant	2026-01-01T10:00:05.000Z	toolUse|bash
+e	c	tool_execution_start	2026-01-01T10:00:06.000Z	bash|{"command":"ls\tfoo","i":"List"}}
+e	m	toolResult	2026-01-01T10:00:07.000Z	
+e	m	assistant	2026-01-01T10:00:09.000Z	stop|
+e	c	session_exit	2026-01-01T10:00:10.000Z	normal

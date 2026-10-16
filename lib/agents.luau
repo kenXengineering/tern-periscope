@@ -297,4 +297,12 @@ end
 -- quiet for a long time, so this is deliberately generous.
 M.STALE_MS = 45 * 60 * 1000
 
+-- The status to show at wall time `now` (epoch ms): a running agent silent for over STALE_MS reads as idle.
+function M.shown(a: Agent, now: number): string
+	if a.status == "running" and a.last ~= nil and now - a.last > M.STALE_MS then
+		return "idle"
+	end
+	return a.status
+end
+
 return M
