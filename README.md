@@ -149,7 +149,8 @@ A session with running subagents shows `● N running` next to its agent count.
 ## Development
 
 See [AGENTS.md](AGENTS.md) for the layout, conventions and how to smoke-test in an isolated Tern instance
-(`dev/tern-test`). There is no build step and no automated test suite.
+(`dev/tern-test`). There is no build step. `sh tests/run.sh` runs the automated tests; it needs the
+[`luau`](https://github.com/luau-lang/luau/releases) CLI, `sh` and `awk`.
 
 ## License
 

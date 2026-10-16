@@ -17,6 +17,10 @@ env:
   # luau-lsp is not on the runners; pin the release and its checksum.
   LUAU_LSP_VERSION: 1.70.1
   LUAU_LSP_SHA256: 1a2ea1ae4f98f8946cefd970a4b54853e11ab4775e6932faa7f60cf920346567
+  # The luau CLI runs tests/*_test.luau; same pinning.
+  LUAU_VERSION: "0.743"
+  LUAU_SHA256_UBUNTU: 99d45afb4afaee00ba631c526c8e8c76c67b60f6f119953ce6409be6d6953663
+  LUAU_SHA256_MACOS: 4334afbfb0c05ee697c9bfea64a85f950249c1e8f6f7d99aaa5a24ee362b09c3
 
 jobs:
   luau:
@@ -41,47 +45,20 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: python3 .github/scripts/check-manifest.py
 
+  # Linux only: syntax and ShellCheck don't depend on the OS. Tests (below) cover the macOS userland.
   shell:
-    name: Shell (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+    name: Shell
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Syntax under sh and bash (and dash where present)
+      - name: Syntax under sh (dash) and bash
         run: |
-          for f in scripts/scan.sh dev/tern-test dev/tern-test-ctl; do
+          for f in scripts/scan.sh dev/tern-test dev/tern-test-ctl tests/*.sh; do
             sh -n "$f"
             bash -n "$f"
-            if command -v dash >/dev/null; then dash -n "$f"; fi
           done
       - name: ShellCheck
-        if: runner.os == 'Linux'
-        run: shellcheck -s sh -S warning scripts/scan.sh dev/tern-test dev/tern-test-ctl
-
-  awk:
-    name: awk (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Install gawk
-        run: |
-          if [ "$RUNNER_OS" = Linux ]; then sudo apt-get update -qq && sudo apt-get install -y -qq gawk mawk; else brew install gawk; fi
-      - name: agent.awk gives the same digest under every awk
-        run: |
-          status=0
-          for impl in awk gawk mawk; do
-            command -v "$impl" >/dev/null || continue
-            echo "== $impl"
-            if ! "$impl" -f scripts/agent.awk .github/fixtures/agent.jsonl | diff -u .github/fixtures/agent.expected -; then status=1; fi
-          done
-          exit $status
+        run: shellcheck -s sh -S warning scripts/scan.sh dev/tern-test dev/tern-test-ctl tests/*.sh
 
   tests:
     name: Tests (${{ matrix.os }})
@@ -92,6 +69,18 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: tests/run.sh
+      # tests/awk_test.sh runs agent.awk under every awk it finds (system awk, gawk, mawk on Linux).
+      - name: Install luau and awks
         run: |
-          if [ -f tests/run.sh ]; then sh tests/run.sh; else echo "no tests/run.sh yet (issue #1)"; fi
+          if [ "$RUNNER_OS" = Linux ]; then
+            asset=luau-ubuntu.zip sum=$LUAU_SHA256_UBUNTU
+            sudo apt-get update -qq && sudo apt-get install -y -qq gawk mawk
+          else
+            asset=luau-macos.zip sum=$LUAU_SHA256_MACOS
+            brew install gawk
+          fi
+          curl -fsSL -o luau.zip "https://github.com/luau-lang/luau/releases/download/${LUAU_VERSION}/${asset}"
+          echo "${sum}  luau.zip" | shasum -a 256 -c -
+          unzip -q luau.zip luau -d "$RUNNER_TEMP/luau"
+          echo "$RUNNER_TEMP/luau" >>"$GITHUB_PATH"
+      - run: sh tests/run.sh

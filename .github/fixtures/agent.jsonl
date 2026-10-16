@@ -1,8 +1,0 @@
-{"type":"session_init","agent":"task","resolvedModel":"anthropic/claude-sonnet-5-5","task":"Fixture task","timestamp":"2026-01-01T10:00:00.000Z"}
-{"type":"message","id":"a1","timestamp":"2026-01-01T10:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"do it"}]}}
-{"type":"message","id":"a2","timestamp":"2026-01-01T10:00:05.000Z","message":{"role":"assistant","content":[{"type":"thinking","thinking":"plan"},{"type":"toolCall","id":"t1","name":"bash","arguments":{"command":"ls\tfoo"}}],"stopReason":"toolUse","usage":{"totalTokens":1234,"cost":{"total":0.0123}}}}
-{"type":"custom","customType":"tool_execution_start","startedAt":"2026-01-01T10:00:06.000Z","toolName":"bash","args":{"command":"ls\tfoo","i":"List"}}
-{"type":"message","id":"a3","timestamp":"2026-01-01T10:00:07.000Z","message":{"role":"toolResult","content":[{"type":"text","text":"foo"}]}}
-{"type":"message","id":"a4","timestamp":"2026-01-01T10:00:09.000Z","message":{"role":"assistant","content":[{"type":"text","text":"done"}],"stopReason":"stop","usage":{"totalTokens":2345,"cost":{"total":0.02}}}}
-{"type":"model_usage","cost":{"total":0.5}}
-{"type":"custom","customType":"session_exit","recordedAt":"2026-01-01T10:00:10.000Z","kind":"normal"}
