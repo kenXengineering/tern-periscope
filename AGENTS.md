@@ -14,7 +14,7 @@ Two Luau VMs, declared in `plugin.toml` (`schema = 1`, `id = "periscope"`):
 - **Host half** (`host.luau`, in the session daemon): `tern.block.define(id, { init, view, key, event, save, title })`.
   Blocks are panes whose state and view are Lua. Every handler has a **2 s budget**. Defines `list` (opens in the
   split layout by default; saved `layout = "list"` is honoured) and `transcript` (palette-hidden; opened by the
-  window half). The session picker popup is drawn by the host in the `layer` region (`with_popup`), not by Tern.
+  window half). The session picker is drawn by the host in the `layer` region (`popup_of` / `layer_col`), not by Tern.
 - **Window half** (`window.luau`, one per Tern window): the `ctrl+alt+p` command and the `tern.route.link` claim for
   `tern-periscope://transcript?path=…&label=…`. Only this half can place panes (`cx.layout:split`). The command also
   picks the tab's omp pane (private-use glyph in its title) and passes its cwd and title as block args; the host matches
@@ -103,6 +103,14 @@ sh -n scripts/scan.sh
   are `main.entries.<key>` / `layer.picker.rows.a_<name>`. Reveal a beat after a render (`tern.timer(60, …)`) so the
   nodes exist. Luau cannot read the scroll offset, so the viewer remembers the cursor entry, not pixels.
 - `ui.node("agent")`'s `stats.age`/`took` tick live in the client; our own rows only refresh with the list refresh.
+- **Never wrap the `layer` root's children in an extra role-carrying `col`** (the old `with_popup` did): the extra box
+  added spacing that moved the break bar and header. `layer_col(kids, popup)` builds the layer once and the picker is
+  a plain sibling (`popup_of`).
+- **Buttons that change label must keep their width** (`periscope.layout` is fixed at 70px, and no active-state rule
+  may change `font-weight`): the header buttons are right-aligned, so any width change shifts the buttons beside them.
+- **`scroll-padding-top` (96px / 324px) must stay above the layer's height**: measured 82px (transcript header),
+  242px (split picker + header), both copies of `header_block` carry the 2px `periscope.rule`. `.sf-layer` is capped at
+  `max-height: 100%` and scrolls, so an open session picker (548px) cannot cut the header off on a short pane.
 
 ## Testing & QA
 
