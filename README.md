@@ -35,7 +35,7 @@ the terminal title. The palette command has no tab context and shows the directo
 the newest session shows too; `s` / `S` or the picker choose another.
 
 Requires Tern with plugin support, omp, and on the machine running the Tern daemon a POSIX `sh` plus `awk`, `grep`,
-`head`, `ls`, `wc`, `tail`, `date`, `cut` and `tr` (macOS, Linux).
+`head`, `ls`, `wc`, `tail`, `date`, `cut`, `tr` and `find` (macOS, Linux).
 
 ## Use
 
@@ -93,6 +93,8 @@ the directory's omp sessions (newest first, up to 50): title, and how many subag
 **Close** or `Esc` dismisses the popup. **Hide sessions without subagents** removes sessions with no subagents from
 the picker, from `s` / `S` and from the newest-session default. The option is saved with the block.
 
+A session with running subagents shows `● N running` next to its agent count.
+
 ## How it works
 
 - omp keeps one transcript per subagent at
@@ -123,6 +125,9 @@ the picker, from `s` / `S` and from the newest-session default. The option is sa
 - A status is inferred from files. A hard-killed omp (no `session_exit`) keeps showing `running` until the
   transcript has been silent for 45 minutes (`STALE_MS` in `lib/agents.luau`), then reads as `idle`.
 - Tool calls that wait quietly (`wait`, long builds) look the same as a hung agent until they finish.
+- The picker's `● N running` count is cheaper and coarser than the list's status: it counts a session's subagent
+  transcripts written in the last 45 minutes (`STALE_MS`) that do not end in `session_exit`. An agent that finished
+  its turn but was not disposed still counts. Refreshes with the session list (every ~6 ticks).
 - The block follows the directory of the pane it was opened from. Two omp sessions in one directory are both
   listed in the picker; the one written last is shown first.
 - Running times in the list refresh about every 1.5 s with the list's own refresh; they do not tick live.
