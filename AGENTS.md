@@ -124,6 +124,13 @@ dev/tern-test-ctl quit
 - `dev/tern-test` pre-answers Tern's "manage omp?" first-run offer with "no" so no popup appears.
 - `tern ctl run` takes **one** argument (quote the command line or put it in a script).
 - Needs real omp sessions for the directory you open (`~/.omp/agent/sessions/…`).
+- Launched from a script or agent, `dev/tern-test` exits at once unless it has a terminal: run it with a pty, not
+  with `&`. `dev/tern-test-ctl key l`, `key enter` and `tree` drive and measure it.
+- `quit` closes the window but the test daemon (and its tabs and blocks) survives and piles up across runs. After a
+  run: `dev/tern-test-ctl quit`, then `pkill -f "tern daemon --socket $HOME/.cache/tern-periscope-test/daemon.sock"`,
+  then `rm -f ~/.cache/tern-periscope-test/daemon.state* ~/.cache/tern-periscope-test/*.sock`.
+- Local lint tools: `luau-lsp` has no Homebrew formula; download the pinned release (`luau-lsp-macos.zip`, version in
+  `ci.yml`). `brew install gawk mawk` for the awk fixture check (CI runs `awk`, `gawk` and `mawk`).
 
 ## CI & Releases
 
