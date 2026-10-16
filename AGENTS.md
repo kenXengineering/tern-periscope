@@ -158,4 +158,7 @@ anything is published.
   development version and may break; it accepts direct pushes from the owner. Larger features still go through a
   branch (`feat/<kebab>`, `fix/<kebab>`, `docs/<kebab>`) and a PR (`gh pr create --base main`). Stable installs use tags.
 - Commit subjects: sentence-case imperative, no prefixes (`Add split view to the list block`).
+- Before every commit run the CI checks locally and commit only if all pass: `luau-lsp analyze --platform=standard
+  --definitions=@tern=.github/tern.d.luau host.luau window.luau lib/*.luau`, `sh -n`/`bash -n`/`dash -n` and
+  `shellcheck -S warning scripts/scan.sh`, `python3 .github/scripts/check-manifest.py`, and the awk fixture diff.
 - Keep the README (keys table, Limits) and this file in step with behaviour changes.
