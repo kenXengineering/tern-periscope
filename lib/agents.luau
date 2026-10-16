@@ -27,7 +27,7 @@ export type Agent = {
 	tool_started: number?,
 }
 
-export type Session = { file: string, id: string, dir: string, title: string, subagents: number }
+export type Session = { file: string, id: string, dir: string, title: string, subagents: number, running: number }
 
 -- A string value cut out of a JSON document that may be truncated.
 local function json_string(s: string, key: string): string?
@@ -122,8 +122,8 @@ function M.parse_sessions(out: string, bucket: string): ({ Session }, number?)
 		if epoch ~= nil then
 			now = (tonumber(epoch) :: number) * 1000
 		else
-			local file, count, head = string.match(line, "^([^\t]+%.jsonl)\t(%d+)\t(.*)$")
-			if file ~= nil and count ~= nil and head ~= nil then
+			local file, count, live, head = string.match(line, "^([^\t]+%.jsonl)\t(%d+)\t(%d+)\t(.*)$")
+			if file ~= nil and count ~= nil and live ~= nil and head ~= nil then
 				local stem = util.strip_suffix(file, ".jsonl")
 				local title = json_string(head, "title")
 				table.insert(sessions, {
@@ -132,6 +132,7 @@ function M.parse_sessions(out: string, bucket: string): ({ Session }, number?)
 					dir = bucket .. "/" .. stem,
 					title = plain(title or ""),
 					subagents = tonumber(count) :: number,
+					running = tonumber(live) :: number,
 				})
 			end
 		end

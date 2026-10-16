@@ -671,6 +671,7 @@ local function session_popup(state: ListState): Node
 					with(ui.text({ ui.span(if on then "●" else "○") }), { role = "periscope.glyph", mark = if on then "running" else nil }),
 					with(ui.text({ ui.span(title, "strong") }), { role = "periscope.name" }),
 					ui.text({ ui.span(s.subagents .. (if s.subagents == 1 then " agent" else " agents"), "muted") }),
+					with(ui.text({ ui.span(if s.running > 0 then "● " .. s.running .. " running" else "") }), { role = "periscope.glyph", key = "live", mark = if s.running > 0 then "running" else nil }),
 				}),
 				{
 					key = "s_" .. safe(s.id),
