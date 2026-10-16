@@ -68,6 +68,11 @@ running time, then three output buttons, with the task description on a line bel
 **Expanded** (full). They apply to bash/shell and every other tool result; folding a single tool with `Space` or a
 click still overrides the mode for that tool.
 
+Headers read left to right: **Periscope** and the session title (dim, cut with `…` when the pane is narrow so it never
+covers the buttons), the filter buttons, a `|`, **Sessions N**, a `|`, and the layout button (**Split view** /
+**List view**, always the same width so the buttons beside it do not move when it toggles). A thin rule closes a
+transcript header so it reads apart from the body scrolling under it.
+
 Tool output is drawn with the richest Tern node that fits, in the Tern theme's colors: a unified diff as a diff, JSON
 as a collapsible tree, a `read` of a known file type (`.go`, `.ts`, `.md`, …) as highlighted code with line numbers,
 anything else (including bash) as ANSI text, so colors the command emitted show. Thoughts are Markdown, in italics.
@@ -88,9 +93,11 @@ return to the list. The layout is saved with the block.
 
 ### Session picker
 
-The **Sessions N** button (list and split headers) opens a popup over the top of the block with a scrollable list of
-the directory's omp sessions (newest first, up to 50): title, and how many subagents each has. Click one to show it;
-**Close** or `Esc` dismisses the popup. **Hide sessions without subagents** removes sessions with no subagents from
+The **Sessions N** button (list and split headers) opens a panel with a scrollable list of the directory's omp
+sessions (newest first, up to 50): title, and how many subagents each has. In the split view it sits between the agent
+picker and the transcript header, with a break bar on each side; elsewhere it follows the header. Click one to show
+it; **Close** or `Esc` dismisses the panel. A short pane scrolls the header and the open panel instead of cutting them
+off. **Hide sessions without subagents** removes sessions with no subagents from
 the picker, from `s` / `S` and from the newest-session default. The option is saved with the block.
 
 A session with running subagents shows `● N running` next to its agent count.
