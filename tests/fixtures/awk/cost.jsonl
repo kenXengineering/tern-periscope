@@ -1,0 +1,6 @@
+{"type":"session_init","agent":"task","resolvedModel":"m","task":"Fixture","timestamp":"2026-01-01T09:59:00.000Z"}
+{"type":"message","id":"u1","timestamp":"2026-01-01T10:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"go"}]}}
+{"type":"message","id":"a2","timestamp":"2026-01-01T10:00:02.000Z","message":{"role":"assistant","content":[{"type":"text","text":"a"}],"stopReason":"stop","usage":{"input":10,"totalTokens":1000,"cost":{"input":0.2,"output":0.05,"total":0.25}}}}
+{"type":"model_usage","tokens":{"total":999},"cost":{"input":0.1,"total":0.125}}
+{"type":"message","id":"a3","timestamp":"2026-01-01T10:00:03.000Z","message":{"role":"assistant","content":[{"type":"text","text":"b"}],"stopReason":"stop","usage":{"totalTokens":500,"cost":{"total":0.0625}}}}
+{"type":"model_usage","tokens":{"total":5}}

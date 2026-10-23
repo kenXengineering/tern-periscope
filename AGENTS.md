@@ -5,7 +5,8 @@
 `tern-periscope` is a single [Tern](https://docs.stencil.so/tern/index.md) plugin written in Luau: a block that shows the
 live subagents of an [omp](https://github.com/can1357/oh-my-pi) session and opens their transcripts. The repository root
 **is** the plugin package (`plugin.toml` at the top), so `tern plugin install github.com/kenXengineering/tern-periscope`
-installs it directly. Everything ships as **source**: no build step, no `package.json`, no automated tests, no CI.
+installs it directly. Everything ships as **source**: no build step, no `package.json`. Tests (`tests/`) and CI
+(`.github/`) are left out of release archives.
 
 ## Architecture & Data Flow
 
@@ -44,6 +45,9 @@ Two Luau VMs, declared in `plugin.toml` (`schema = 1`, `id = "periscope"`):
 | `scripts/scan.sh`, `scripts/agent.awk` | Read-only probes of omp's session store |
 | `periscope.css` | Plugin stylesheet; selectors are scoped by `[data-surface^='plugin.periscope.']` |
 | `dev/tern-test`, `dev/tern-test-ctl` | Launch and drive an isolated Tern instance for smoke tests |
+| `tests/run.sh` | Runs every automated test (see Testing & QA) |
+| `tests/tern_stub.luau`, `tests/check.luau` | Fake `tern` global and the assertion harness for `tests/*_test.luau` |
+| `tests/fixtures/` | Hand-written omp transcripts and golden digests (no real user data) |
 
 ## Development Commands
 
@@ -60,6 +64,9 @@ tern plugin types /tmp/x    # writes tern.d.luau for luau-lsp (keep it OUTSIDE t
 luau-lsp analyze --platform=standard --definitions=@tern=/tmp/x/tern.d.luau \
   host.luau window.luau lib/*.luau
 sh -n scripts/scan.sh
+
+# Tests (needs luau, sh and awk; gawk/mawk are used when installed)
+sh tests/run.sh
 ```
 
 ## Code Conventions & Common Patterns
@@ -76,7 +83,7 @@ sh -n scripts/scan.sh
 - **Clocks**: `scan.sh` reports `now <epoch>`; `wall()` = scan time + `tern.now()` delta. Luau does not know wall time.
 - Round-trip costs: chunk argv at 40 names; join parallel `scan` calls with a `pending` counter.
 - Tunables are named constants (`TICK_MS`, `REFRESH_EVERY`, `TAIL_LINES`, `PREVIEW_LINES`, `STALE_MS`, …).
-  `STALE_MS` (45 min) is also stated in the README's Limits: change both.
+  `STALE_MS` (45 min) is also stated in the README's Limits and asserted in `tests/agents_test.luau`: change all three.
 - `with()`, `safe()` and `has()` are duplicated in `host.luau` and `lib/transcript.luau`; move shared ones to
   `lib/util.luau` rather than copying again.
 - Tabs for indentation, double quotes, trailing commas, as in the existing files. No formatter config exists.
@@ -114,8 +121,29 @@ sh -n scripts/scan.sh
 
 ## Testing & QA
 
-No automated tests exist; do not add test scaffolding for wiring. Verification is a smoke run of the changed path plus
-the static checks above. State in your PR or notes what you ran and what you could not run.
+`sh tests/run.sh` runs every automated test and exits non-zero on a failure. It needs `luau`, `sh` and `awk`; `gawk`
+and `mawk` are used too when installed.
+
+| File | Covers |
+| --- | --- |
+| `tests/agents_test.luau` | `classify` (the README status table), `shown` + `STALE_MS`, the `scan.sh` output parsers, `bucket`, `sessions_root` env precedence |
+| `tests/util_test.luau` | `parse_iso`, `duration`, `oneline`, `unescape`, `encode`/`decode`, path helpers, `scan()` |
+| `tests/transcript_test.luau` | Records to entries, tail polling, keys, folds, output modes and the `PREVIEW_LINES` cut |
+| `tests/awk_test.sh` | `scripts/agent.awk` on each `tests/fixtures/awk/*.jsonl` under every awk found; must equal the `.expected` beside it |
+| `tests/scan_test.sh` | Every `scripts/scan.sh` subcommand on a session store built in a temp dir |
+
+- The stock `luau` CLI gives each required module its own globals, so a test cannot set `tern`. `run.sh` copies `lib/`
+  to a temp dir with `local tern = require("../tests/tern_stub").tern` on line 1 (line numbers stay right) and runs
+  the tests from there. `tests/tern_stub.luau` fakes env, clock, `process.run`, timers, a JSON decoder and `ui` builders
+  that return plain `{ k, p, c }` nodes; `tests/check.luau` has `test`, `eq`, `ok` and `done`.
+- A new test is `tests/<name>_test.luau` (require `../lib/<module>`, end with `check.done()`) or `tests/<name>_test.sh`
+  (run with `sh` from the repository root, POSIX only, ShellCheck clean).
+- `host.luau` cannot be loaded without `tern.block`; move a pure rule into `lib/` to test it (as `agents.shown`).
+- Test behaviour a user would notice (statuses, counts, text shown, boundaries), not wiring. Changing `agent.awk`'s
+  output means updating the `.expected` files with it.
+
+Rendering, CSS and the host/window routing need a real Tern: after the tests and static checks, smoke-run the changed
+path and state in your PR or notes what you ran and what you could not run.
 
 **Isolated smoke test** (never touches your real Tern config or plugins):
 
@@ -148,9 +176,8 @@ dev/tern-test-ctl quit
 | --- | --- |
 | `luau` | `luau-lsp analyze` (pinned release + SHA-256) against `.github/tern.d.luau`, a **pinned copy** of `tern plugin types DIR`: refresh it by hand when Tern updates |
 | `manifest` | `.github/scripts/check-manifest.py`: `schema = 1`, semver `version`, referenced files exist, every `[[blocks]]` id is defined in `host.luau` |
-| `shell` (Linux, macOS) | `sh -n` / `bash -n` / `dash -n`; ShellCheck (Linux, warnings and up) |
-| `awk` (Linux, macOS) | `scripts/agent.awk` on `.github/fixtures/agent.jsonl` under `awk`, `gawk`, `mawk` must equal `agent.expected` (change both together) |
-| `tests` (Linux, macOS) | `tests/run.sh`, once it exists (issue #1) |
+| `shell` (Linux) | `sh -n` (dash) / `bash -n` and ShellCheck (warnings and up) on `scripts/scan.sh`, `dev/*`, `tests/*.sh` |
+| `tests` (Linux, macOS) | `sh tests/run.sh` with a pinned `luau` CLI (release + SHA-256 per OS), plus `gawk` and `mawk` (Linux) / `gawk` (macOS); macOS covers BSD awk, `find`, `ls`, `touch` and bash-as-`sh` |
 
 Actions are pinned by commit SHA; Dependabot keeps them current. Run the same checks locally with the commands under
 Development Commands, plus `python3 .github/scripts/check-manifest.py`.
@@ -162,7 +189,7 @@ Development Commands, plus `python3 .github/scripts/check-manifest.py`.
 
 `.github/workflows/release.yml` then runs CI, checks that the tag is semver, equals `v` + the `plugin.toml` version and is
 on `main`, and builds `tern-periscope-<version>.tar.gz` / `.zip` with `git archive` (`.gitattributes` leaves out `.github`,
-`dev`, `AGENTS.md`) plus `SHA256SUMS`. It publishes a GitHub release with those files and a changelog of the commits
+`dev`, `tests`, `AGENTS.md`) plus `SHA256SUMS`. It publishes a GitHub release with those files and a changelog of the commits
 since the previous release (a final release compares with the last final release; a prerelease with the last tag).
 A tag containing `-` is marked as a prerelease and never becomes "latest". A mismatched tag fails the workflow before
 anything is published.
@@ -175,5 +202,6 @@ anything is published.
 - Commit subjects: sentence-case imperative, no prefixes (`Add split view to the list block`).
 - Before every commit run the CI checks locally and commit only if all pass: `luau-lsp analyze --platform=standard
   --definitions=@tern=.github/tern.d.luau host.luau window.luau lib/*.luau`, `sh -n`/`bash -n`/`dash -n` and
-  `shellcheck -S warning scripts/scan.sh`, `python3 .github/scripts/check-manifest.py`, and the awk fixture diff.
+  `shellcheck -s sh -S warning scripts/scan.sh tests/*.sh`, `python3 .github/scripts/check-manifest.py`, and
+  `sh tests/run.sh`.
 - Keep the README (keys table, Limits) and this file in step with behaviour changes.

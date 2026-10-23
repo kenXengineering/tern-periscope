@@ -93,12 +93,8 @@ local function wall(state: ListState): number
 	return state.now + (tern.now() - state.mono)
 end
 
--- Shown status: a "running" agent that has been silent for STALE_MS reads as idle.
 local function shown(state: ListState, a: Agent): string
-	if a.status == "running" and a.last ~= nil and wall(state) - a.last > agents.STALE_MS then
-		return "idle"
-	end
-	return a.status
+	return agents.shown(a, wall(state))
 end
 
 local RANK: { [string]: number } = { running = 1, pending = 2, idle = 3, failed = 4, aborted = 4, parked = 5 }
